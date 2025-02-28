@@ -2,15 +2,13 @@
 
 namespace SwagLabsAutomation.Pages
 {
-    public class LoginPage : BasePage
+    public class LoginPage(IWebDriver driver) : BasePage(driver)
     {
         // Locators
-        private By UsernameField => By.Id("user-name");
-        private By PasswordField => By.Id("password");
-        private By LoginButton => By.Id("login-button");
-        private By ErrorMessage => By.CssSelector("[data-test='error']");
-
-        public LoginPage(IWebDriver driver) : base(driver) { }
+        private static By UsernameField => By.Id("user-name");
+        private static By PasswordField => By.Id("password");
+        private static By LoginButton => By.Id("login-button");
+        private static By ErrorMessage => By.CssSelector("[data-test='error']");
 
         public void NavigateToLoginPage()
         {

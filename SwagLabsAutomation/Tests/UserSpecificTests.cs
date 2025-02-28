@@ -1,8 +1,5 @@
-﻿using NUnit.Framework;
-using OpenQA.Selenium;
-using SwagLabsAutomation.Pages;
+﻿using SwagLabsAutomation.Pages;
 using SwagLabsAutomation.Utils;
-using System;
 
 namespace SwagLabsAutomation.Tests
 {

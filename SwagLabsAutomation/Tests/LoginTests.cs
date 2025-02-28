@@ -6,14 +6,14 @@ namespace SwagLabsAutomation.Tests
 {
     public class LoginTests : TestBase
     {
-        private LoginPage loginPage;
+        private LoginPage _loginPage;
 
         [SetUp]
         public void SetupTest()
         {
-            loginPage = new LoginPage(Driver);
+            _loginPage = new LoginPage(Driver);
             LogInfo("Navegando para a página de login");
-            loginPage.NavigateToLoginPage();
+            _loginPage.NavigateToLoginPage();
             LogInfo("Página de login carregada");
         }
 
@@ -27,7 +27,7 @@ namespace SwagLabsAutomation.Tests
 
             // Act
             LogInfo("Realizando login");
-            var productsPage = loginPage.Login(username, password);
+            var productsPage = _loginPage.Login(username, password);
 
             // Assert
             LogInfo("Verificando redirecionamento para a página de produtos");
@@ -50,15 +50,15 @@ namespace SwagLabsAutomation.Tests
 
             // Act
             LogInfo("Realizando login com credenciais inválidas");
-            loginPage.Login(username, password);
+            _loginPage.Login(username, password);
 
             LogInfo("Verificando mensagem de erro");
-            string errorMessage = loginPage.GetErrorMessage();
+            string errorMessage = _loginPage.GetErrorMessage();
             LogInfo($"Mensagem de erro obtida: '{errorMessage}'");
 
             // Assert
             LogInfo("Verificando se permaneceu na página de login");
-            bool isOnLoginPage = loginPage.IsOnLoginPage();
+            bool isOnLoginPage = _loginPage.IsOnLoginPage();
             Assert.That(isOnLoginPage, Is.True, "Não permaneceu na página de login após tentativa com credenciais inválidas.");
 
             LogInfo("Verificando conteúdo da mensagem de erro");

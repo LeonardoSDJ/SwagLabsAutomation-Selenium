@@ -3,21 +3,19 @@ using OpenQA.Selenium.Support.UI;
 
 namespace SwagLabsAutomation.Pages
 {
-    public class ProductsPage : BasePage
+    public class ProductsPage(IWebDriver driver) : BasePage(driver)
     {
         private By _productItems = By.CssSelector(".inventory_item");
-        private By _productImages = By.CssSelector(".inventory_item_img img");
-        private By _productNames = By.CssSelector(".inventory_item_name");
+        private readonly By _productImages = By.CssSelector(".inventory_item_img img");
+        private readonly By _productNames = By.CssSelector(".inventory_item_name");
         private By _addToCartButtons = By.CssSelector("[data-test^='add-to-cart']");
         private By _cartIcon = By.CssSelector(".shopping_cart_link");
-        private By _productSortContainer = By.CssSelector("[data-test='product_sort_container']");
+        private readonly By _productSortContainer = By.CssSelector("[data-test='product_sort_container']");
 
         // Locators
-        private By ProductsTitle => By.ClassName("title");
-        private By CartBadge => By.ClassName("shopping_cart_badge");
-        private By CartLink => By.ClassName("shopping_cart_link");
-
-        public ProductsPage(IWebDriver driver) : base(driver) { }
+        private static By ProductsTitle => By.ClassName("title");
+        private static By CartBadge => By.ClassName("shopping_cart_badge");
+        private static By CartLink => By.ClassName("shopping_cart_link");
 
         public bool IsOnProductsPage()
         {

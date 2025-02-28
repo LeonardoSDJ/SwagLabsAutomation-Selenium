@@ -2,15 +2,13 @@
 
 namespace SwagLabsAutomation.Pages
 {
-    public class CartPage : BasePage
+    public class CartPage(IWebDriver driver) : BasePage(driver)
     {
         // Locators
-        private By CartTitle => By.ClassName("title");
-        private By CheckoutButton => By.Id("checkout");
-        private By ContinueShoppingButton => By.Id("continue-shopping");
-        private By CartItems => By.ClassName("cart_item");
-
-        public CartPage(IWebDriver driver) : base(driver) { }
+        private static By CartTitle => By.ClassName("title");
+        private static By CheckoutButton => By.Id("checkout");
+        private static By ContinueShoppingButton => By.Id("continue-shopping");
+        private static By CartItems => By.ClassName("cart_item");
 
         public bool IsOnCartPage()
         {
@@ -25,14 +23,12 @@ namespace SwagLabsAutomation.Pages
 
         public void RemoveItemFromCart(string productId)
         {
-            string removeButtonId = $"remove-{productId}";
-            By removeButton = By.Id(removeButtonId);
+            var removeButtonId = $"remove-{productId}";
+            var removeButton = By.Id(removeButtonId);
 
-            if (IsElementDisplayed(removeButton))
-            {
-                WaitForElementClickable(removeButton);
-                Driver.FindElement(removeButton).Click();
-            }
+            if (!IsElementDisplayed(removeButton)) return;
+            WaitForElementClickable(removeButton);
+            Driver.FindElement(removeButton).Click();
         }
 
         public CheckoutPage GoToCheckout()

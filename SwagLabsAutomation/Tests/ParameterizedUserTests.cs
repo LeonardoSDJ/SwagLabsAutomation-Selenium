@@ -1,9 +1,6 @@
-﻿using NUnit.Framework;
-using SwagLabsAutomation.Models;
+﻿using SwagLabsAutomation.Models;
 using SwagLabsAutomation.Pages;
 using SwagLabsAutomation.Utils;
-using System;
-using System.Collections.Generic;
 
 namespace SwagLabsAutomation.Tests
 {
@@ -78,7 +75,7 @@ namespace SwagLabsAutomation.Tests
         }
 
         // Dados de teste para verificação de UI por tipo de usuário
-        public static IEnumerable<TestCaseData> UITestCases
+        public static IEnumerable<TestCaseData>  UiTestCaseDatas
         {
             get
             {
@@ -90,7 +87,7 @@ namespace SwagLabsAutomation.Tests
             }
         }
 
-        [Test, TestCaseSource(nameof(UITestCases))]
+        [Test, TestCaseSource(nameof(UiTestCaseDatas))]
         [Description("Testa comportamento de UI para diferentes tipos de usuário")]
         public void User_UI_Test(UserModel user, bool shouldHaveSameImages)
         {

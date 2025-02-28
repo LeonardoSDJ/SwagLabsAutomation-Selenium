@@ -2,27 +2,27 @@
 
 namespace SwagLabsAutomation.Pages
 {
-    public class CheckoutPage : BasePage
+    public class CheckoutPage(IWebDriver driver) : BasePage(driver)
     {
-        private By _errorMessage = By.CssSelector("[data-test='error']");
-        private By _completeHeader = By.CssSelector(".complete-header");
+        private readonly By _errorMessage = By.CssSelector("[data-test='error']");
+        private readonly By _completeHeader = By.CssSelector(".complete-header");
 
         // Locators - Step One (Informações Pessoais)
-        private By FirstNameField => By.Id("first-name");
-        private By LastNameField => By.Id("last-name");
-        private By PostalCodeField => By.Id("postal-code");
-        private By ContinueButton => By.Id("continue");
-        private By CancelButton => By.Id("cancel");
+        private static By FirstNameField => By.Id("first-name");
+        private static By LastNameField => By.Id("last-name");
+        private static By PostalCodeField => By.Id("postal-code");
+        private static By ContinueButton => By.Id("continue");
+        private static By CancelButton => By.Id("cancel");
 
         // Locators - Step Two (Revisão)
-        private By FinishButton => By.Id("finish");
-        private By SummaryInfoContainer => By.ClassName("summary_info");
+        private static By FinishButton => By.Id("finish");
+/*
+        private static By SummaryInfoContainer => By.ClassName("summary_info");
+*/
 
         // Locators - Complete
-        private By CompleteHeader => By.ClassName("complete-header");
-        private By BackToProductsButton => By.Id("back-to-products");
-
-        public CheckoutPage(IWebDriver driver) : base(driver) { }
+        private static By CompleteHeader => By.ClassName("complete-header");
+        private static By BackToProductsButton => By.Id("back-to-products");
 
         public bool IsOnCheckoutStepOne()
         {
@@ -69,37 +69,30 @@ namespace SwagLabsAutomation.Pages
 
         public CheckoutPage CompleteCheckout()
         {
-            if (IsOnCheckoutStepTwo())
-            {
-                WaitForElementClickable(FinishButton);
-                Driver.FindElement(FinishButton).Click();
-            }
+            if (!IsOnCheckoutStepTwo()) return this;
+            WaitForElementClickable(FinishButton);
+            Driver.FindElement(FinishButton).Click();
 
             return this;
         }
 
         public ProductsPage GoBackToProducts()
         {
-            if (IsOnCheckoutComplete())
-            {
-                WaitForElementClickable(BackToProductsButton);
-                Driver.FindElement(BackToProductsButton).Click();
-            }
+            if (!IsOnCheckoutComplete()) return new ProductsPage(Driver);
+            WaitForElementClickable(BackToProductsButton);
+            Driver.FindElement(BackToProductsButton).Click();
 
             return new ProductsPage(Driver);
         }
 
         public double GetTotalPrice()
         {
-            if (IsOnCheckoutStepTwo())
-            {
-                By totalPriceLocator = By.ClassName("summary_total_label");
-                string totalText = Driver.FindElement(totalPriceLocator).Text;
-                // Extrai o valor numérico de um texto como "Total: $32.39"
-                return double.Parse(totalText.Split('$')[1]);
-            }
+            if (!IsOnCheckoutStepTwo()) return 0;
+            var totalPriceLocator = By.ClassName("summary_total_label");
+            string totalText = Driver.FindElement(totalPriceLocator).Text;
+            // Extrai o valor numérico de um texto como "Total: $32.39"
+            return double.Parse(totalText.Split('$')[1]);
 
-            return 0;
         }
         public bool HasFormErrors()
         {

@@ -5,28 +5,22 @@ using System;
 
 namespace SwagLabsAutomation.Pages
 {
-    public class BasePage
+    public class BasePage(IWebDriver driver)
     {
-        protected IWebDriver Driver;
-        protected WebDriverWait Wait;
+        protected readonly IWebDriver Driver = driver;
+        private readonly WebDriverWait Wait = new(driver, TimeSpan.FromSeconds(10));
 
-        public BasePage(IWebDriver driver)
-        {
-            Driver = driver;
-            Wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
-        }
-
-        public void WaitForElementVisible(By locator)
+        protected void WaitForElementVisible(By locator)
         {
             Wait.Until(ExpectedConditions.ElementIsVisible(locator));
         }
 
-        public void WaitForElementClickable(By locator)
+        protected void WaitForElementClickable(By locator)
         {
             Wait.Until(ExpectedConditions.ElementToBeClickable(locator));
         }
 
-        public bool IsElementDisplayed(By locator)
+        protected bool IsElementDisplayed(By locator)
         {
             try
             {

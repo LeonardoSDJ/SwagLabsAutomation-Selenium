@@ -1,8 +1,6 @@
 ﻿using OpenQA.Selenium;
-using System;
 using System.Diagnostics;
 using AventStack.ExtentReports;
-using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
 
 namespace SwagLabsAutomation.Utils
 {
@@ -11,8 +9,8 @@ namespace SwagLabsAutomation.Utils
         private readonly IWebDriver _driver;
         private readonly ExtentTest? _test; // Make _test nullable
         private readonly string _username;
-        private Stopwatch _stopwatch;
-        private object operation;
+        private readonly Stopwatch _stopwatch;
+        private readonly object _operation;
         private AventStack.ExtentReports.ExtentReports extentReports;
 
         public UserPerformanceTracker(IWebDriver driver, string username, ExtentTest test)
@@ -21,7 +19,7 @@ namespace SwagLabsAutomation.Utils
             _username = username;
             _test = test;
             _stopwatch = new Stopwatch();
-            operation = new object(); // Initialize operation
+            _operation = new object(); // Initialize operation
             extentReports = new AventStack.ExtentReports.ExtentReports(); // Initialize extentReports
         }
 
@@ -31,7 +29,7 @@ namespace SwagLabsAutomation.Utils
             _username = username;
             this.extentReports = extentReports;
             _stopwatch = new Stopwatch();
-            operation = new object(); // Initialize operation
+            _operation = new object(); // Initialize operation
         }
 
         public void StartTracking(string operation)
@@ -86,7 +84,7 @@ namespace SwagLabsAutomation.Utils
             Screenshot screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
 
             // Definir o caminho do arquivo de forma absoluta para evitar problemas de permissão
-            string screenshotPath = Path.Combine(screenshotDirectory, $"{_username}_{operation}_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+            string screenshotPath = Path.Combine(screenshotDirectory, $"{_username}_{_operation}_{DateTime.Now:yyyyMMdd_HHmmss}.png");
 
             // Salvar o screenshot
             screenshot.SaveAsFile(screenshotPath);
@@ -99,7 +97,7 @@ namespace SwagLabsAutomation.Utils
         private void LogMessage(string message)
         {
             Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}");
-            // Opcionalmente, adicionar logs a um arquivo
+            // Adicionar logs a um arquivo
             System.IO.File.AppendAllText("./Logs/user_tests.log",
                 $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}\n");
         }
