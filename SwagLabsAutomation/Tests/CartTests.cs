@@ -8,7 +8,7 @@ namespace SwagLabsAutomation.Tests
     {
         private LoginPage loginPage;
         private ProductsPage productsPage;
-        private CartPage cartPage;
+        private CartPage? cartPage;
 
         [SetUp]
         public void SetupTest()
@@ -18,8 +18,6 @@ namespace SwagLabsAutomation.Tests
             productsPage = loginPage.Login("standard_user", "secret_sauce");
             Assert.That(productsPage.IsOnProductsPage(), Is.True, "Falha ao fazer login para iniciar os testes de carrinho.");
             
-            // Inicializando o cartPage após navegar para a página de produtos
-            cartPage = productsPage.GoToCart();
         }
 
         [Test]

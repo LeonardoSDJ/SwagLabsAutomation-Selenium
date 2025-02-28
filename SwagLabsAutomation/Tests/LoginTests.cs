@@ -12,7 +12,9 @@ namespace SwagLabsAutomation.Tests
         public void SetupTest()
         {
             loginPage = new LoginPage(Driver);
+            LogInfo("Navegando para a página de login");
             loginPage.NavigateToLoginPage();
+            LogInfo("Página de login carregada");
         }
 
         [Test]
@@ -21,12 +23,21 @@ namespace SwagLabsAutomation.Tests
             // Arrange
             string username = "standard_user";
             string password = "secret_sauce";
+            LogInfo($"Tentando login com usuário: {username}");
 
             // Act
+            LogInfo("Realizando login");
             var productsPage = loginPage.Login(username, password);
 
             // Assert
-            Assert.That(productsPage.IsOnProductsPage(), Is.True, "Login falhou, não redirecionou para a página de produtos.");
+            LogInfo("Verificando redirecionamento para a página de produtos");
+            bool isOnProductsPage = productsPage.IsOnProductsPage();
+            Assert.That(isOnProductsPage, Is.True, "Login falhou, não redirecionou para a página de produtos.");
+
+            if (isOnProductsPage)
+                LogPass("Login realizado com sucesso, redirecionado para página de produtos");
+            else
+                LogFail("Falha no redirecionamento após login");
         }
 
         [Test]
@@ -35,14 +46,27 @@ namespace SwagLabsAutomation.Tests
             // Arrange
             string username = "invalid_user";
             string password = "invalid_password";
+            LogInfo($"Tentando login com credenciais inválidas: {username}");
 
             // Act
+            LogInfo("Realizando login com credenciais inválidas");
             loginPage.Login(username, password);
+
+            LogInfo("Verificando mensagem de erro");
             string errorMessage = loginPage.GetErrorMessage();
+            LogInfo($"Mensagem de erro obtida: '{errorMessage}'");
 
             // Assert
-            Assert.That(loginPage.IsOnLoginPage(), Is.True, "Não permaneceu na página de login após tentativa com credenciais inválidas.");
-            Assert.That(errorMessage.Contains("Username and password do not match"), Is.True, "Mensagem de erro incorreta ou não exibida.");
+            LogInfo("Verificando se permaneceu na página de login");
+            bool isOnLoginPage = loginPage.IsOnLoginPage();
+            Assert.That(isOnLoginPage, Is.True, "Não permaneceu na página de login após tentativa com credenciais inválidas.");
+
+            LogInfo("Verificando conteúdo da mensagem de erro");
+            bool containsErrorMessage = errorMessage.Contains("Username and password do not match");
+            Assert.That(containsErrorMessage, Is.True, "Mensagem de erro incorreta ou não exibida.");
+
+            if (isOnLoginPage && containsErrorMessage)
+                LogPass("Teste de login inválido concluído com sucesso");
         }
     }
 }

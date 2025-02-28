@@ -37,5 +37,9 @@ namespace SwagLabsAutomation.Pages
         {
             return IsElementDisplayed(LoginButton);
         }
+        public void GoTo()
+        {
+            Driver.Navigate().GoToUrl("https://www.saucedemo.com/");
+        }
     }
 }

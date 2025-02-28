@@ -4,6 +4,9 @@ namespace SwagLabsAutomation.Pages
 {
     public class CheckoutPage : BasePage
     {
+        private By _errorMessage = By.CssSelector("[data-test='error']");
+        private By _completeHeader = By.CssSelector(".complete-header");
+
         // Locators - Step One (Informações Pessoais)
         private By FirstNameField => By.Id("first-name");
         private By LastNameField => By.Id("last-name");
@@ -42,6 +45,8 @@ namespace SwagLabsAutomation.Pages
             Driver.FindElement(FirstNameField).SendKeys(firstName);
             Driver.FindElement(LastNameField).SendKeys(lastName);
             Driver.FindElement(PostalCodeField).SendKeys(postalCode);
+
+            ((ITakesScreenshot)Driver).GetScreenshot().SaveAsFile("Checkout_Fill_Info.png");
 
             return this;
         }
@@ -95,6 +100,29 @@ namespace SwagLabsAutomation.Pages
             }
 
             return 0;
+        }
+        public bool HasFormErrors()
+        {
+            try
+            {
+                return Driver.FindElements(_errorMessage).Count > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        public bool IsOrderComplete()
+        {
+            try
+            {
+                WaitForElementVisible(_completeHeader);
+                return Driver.FindElement(_completeHeader).Displayed;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }
