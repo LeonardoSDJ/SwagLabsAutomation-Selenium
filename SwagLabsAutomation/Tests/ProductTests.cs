@@ -4,9 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SwagLabsAutomation.Tests
+namespace SwagLabsAutomation.Tests;
+
+class ProductTests
 {
-    class ProductTests
-    {
-    }
 }

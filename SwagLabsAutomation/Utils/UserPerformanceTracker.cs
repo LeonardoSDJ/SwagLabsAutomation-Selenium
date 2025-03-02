@@ -2,105 +2,155 @@
 using System.Diagnostics;
 using AventStack.ExtentReports;
 
-namespace SwagLabsAutomation.Utils
+namespace SwagLabsAutomation.Utils;
+
+public class UserPerformanceTracker
 {
-    public class UserPerformanceTracker
+    private readonly IWebDriver? _driver;
+    private readonly ExtentTest? _test; // Make _test nullable
+    private readonly string _username;
+    private readonly Stopwatch _stopwatch;
+    private readonly object _operation;
+    private AventStack.ExtentReports.ExtentReports extentReports;
+
+    public UserPerformanceTracker(IWebDriver? driver, string username, ExtentTest test)
     {
-        private readonly IWebDriver _driver;
-        private readonly ExtentTest? _test; // Make _test nullable
-        private readonly string _username;
-        private readonly Stopwatch _stopwatch;
-        private readonly object _operation;
-        private AventStack.ExtentReports.ExtentReports extentReports;
+        _driver = driver;
+        _username = username;
+        _test = test;
+        _stopwatch = new Stopwatch();
+        _operation = new object(); // Initialize operation
+        extentReports = new AventStack.ExtentReports.ExtentReports(); // Initialize extentReports
+    }
 
-        public UserPerformanceTracker(IWebDriver driver, string username, ExtentTest test)
-        {
-            _driver = driver;
-            _username = username;
-            _test = test;
-            _stopwatch = new Stopwatch();
-            _operation = new object(); // Initialize operation
-            extentReports = new AventStack.ExtentReports.ExtentReports(); // Initialize extentReports
-        }
+    public UserPerformanceTracker(IWebDriver? driver, string username, AventStack.ExtentReports.ExtentReports extentReports)
+    {
+        _driver = driver;
+        _username = username;
+        this.extentReports = extentReports;
+        _stopwatch = new Stopwatch();
+        _operation = new object(); // Initialize operation
+    }
 
-        public UserPerformanceTracker(IWebDriver driver, string username, AventStack.ExtentReports.ExtentReports extentReports)
+    public void StartTracking(string operation)
+    {
+        _stopwatch.Reset();
+        _stopwatch.Start();
+    
+        try
         {
-            _driver = driver;
-            _username = username;
-            this.extentReports = extentReports;
-            _stopwatch = new Stopwatch();
-            _operation = new object(); // Initialize operation
-        }
-
-        public void StartTracking(string operation)
-        {
-            _stopwatch.Reset();
-            _stopwatch.Start();
             LogMessage($"Iniciando operação '{operation}' para usuário '{_username}'");
         }
-
-        public long StopTracking(string operation)
+        catch (Exception ex)
         {
-            _stopwatch.Stop();
-            long elapsedMs = _stopwatch.ElapsedMilliseconds;
+            Console.WriteLine($"Erro ao registrar início da operação: {ex.Message}");
+            _test?.Warning($"Erro ao iniciar tracking: {ex.Message}");
+        }
+    }
 
-            LogMessage($"Operação '{operation}' para usuário '{_username}' concluída em {elapsedMs}ms");
+    public long StopTracking(string operation)
+    {
+        _stopwatch.Stop();
+        long elapsedMs = _stopwatch.ElapsedMilliseconds;
 
+        LogMessage($"Operação '{operation}' para usuário '{_username}' concluída em {elapsedMs}ms");
+
+        try
+        {
             // Criar o diretório Screenshots caso não exista
-            string screenshotDirectory = "./Screenshots";
-            if (!System.IO.Directory.Exists(screenshotDirectory))
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string screenshotDirectory = Path.Combine(baseDir, "Screenshots");
+            if (!Directory.Exists(screenshotDirectory))
             {
-                System.IO.Directory.CreateDirectory(screenshotDirectory);
+                Directory.CreateDirectory(screenshotDirectory);
             }
 
             // Capturar o screenshot
-            Screenshot screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
+            if (_driver != null)
+            {
+                Screenshot screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
 
-            // Definir o caminho do arquivo de forma absoluta para evitar problemas de permissão
-            string screenshotPath = Path.Combine(screenshotDirectory, $"{_username}_{operation}_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+                // Definir o caminho do arquivo
+                string screenshotPath = Path.Combine(screenshotDirectory, 
+                    $"{_username}_{operation}_{DateTime.Now:yyyyMMdd_HHmmss}.png");
 
-            // Salvar o screenshot
-            screenshot.SaveAsFile(screenshotPath);
+                // Salvar o screenshot
+                screenshot.SaveAsFile(screenshotPath);
 
-            // Adicionar informações ao relatório
-            _test?.Log(Status.Info, $"Operação: {operation}, Tempo: {elapsedMs}ms");
-            _test?.AddScreenCaptureFromPath(screenshotPath);
-
-            return elapsedMs;
+                // Adicionar informações ao relatório
+                _test?.Log(Status.Info, $"Operação: {operation}, Tempo: {elapsedMs}ms");
+                _test?.AddScreenCaptureFromPath(screenshotPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao salvar screenshot: {ex.Message}");
+            _test?.Warning($"Não foi possível salvar screenshot: {ex.Message}");
         }
 
-        public void LogUserBehavior(string behavior, string details)
-        {
-            LogMessage($"Comportamento detectado para '{_username}': {behavior} - {details}");
+        return elapsedMs;
+    }
 
-            // Criar o diretório Screenshots caso não exista
-            string screenshotDirectory = "./Screenshots";
-            if (!System.IO.Directory.Exists(screenshotDirectory))
+    // Em UserPerformanceTracker.cs
+    public void LogUserBehavior(string behavior, string details)
+    {
+        LogMessage($"Comportamento detectado para '{_username}': {behavior} - {details}");
+
+        try
+        {
+            // Criar o diretório Screenshots com path absoluto
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string screenshotDirectory = Path.Combine(baseDir, "Screenshots");
+            if (!Directory.Exists(screenshotDirectory))
             {
-                System.IO.Directory.CreateDirectory(screenshotDirectory);
+                Directory.CreateDirectory(screenshotDirectory);
             }
 
             // Capturar o screenshot
-            Screenshot screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
+            if (_driver != null)
+            {
+                Screenshot screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
 
-            // Definir o caminho do arquivo de forma absoluta para evitar problemas de permissão
-            string screenshotPath = Path.Combine(screenshotDirectory, $"{_username}_{_operation}_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+                // Usar behavior como parte do nome do arquivo em vez de _operation
+                string screenshotPath = Path.Combine(screenshotDirectory, 
+                    $"{_username}_{behavior.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd_HHmmss}.png");
 
-            // Salvar o screenshot
-            screenshot.SaveAsFile(screenshotPath);
+                // Salvar o screenshot
+                screenshot.SaveAsFile(screenshotPath);
 
-            // Adicionar ao relatório
-            _test?.Log(Status.Info, $"{behavior}: {details}");
-            _test?.AddScreenCaptureFromPath(screenshotPath);
+                // Adicionar ao relatório
+                _test?.Log(Status.Info, $"{behavior}: {details}");
+                _test?.AddScreenCaptureFromPath(screenshotPath);
+            }
         }
-
-        private void LogMessage(string message)
+        catch (Exception ex)
         {
-            Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}");
+            Console.WriteLine($"Erro ao salvar screenshot: {ex.Message}");
+            _test?.Warning($"Não foi possível salvar screenshot: {ex.Message}");
+        }
+    }
+
+    private void LogMessage(string message)
+    {
+        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}");
+    
+        try
+        {
+            // Criar diretório de logs se não existir
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string logDirectory = Path.Combine(baseDir, "Logs");
+            if (!Directory.Exists(logDirectory))
+            {
+                Directory.CreateDirectory(logDirectory);
+            }
+        
             // Adicionar logs a um arquivo
-            System.IO.File.AppendAllText("./Logs/user_tests.log",
+            File.AppendAllText(Path.Combine(logDirectory, "user_tests.log"),
                 $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}\n");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao salvar log: {ex.Message}");
         }
     }
 }
-

@@ -4,9 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SwagLabsAutomation.Utils
+namespace SwagLabsAutomation.Utils;
+
+class Constants
 {
-    class Constants
-    {
-    }
 }
