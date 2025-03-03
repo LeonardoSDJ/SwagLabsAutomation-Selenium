@@ -45,6 +45,7 @@ public class BiDiExampleTests : TestBase
         }
         finally
         {
+            _biDiHandler.Dispose();
             // Chama o TearDown da classe base para finalizar o teste
             base.TearDown();
         }

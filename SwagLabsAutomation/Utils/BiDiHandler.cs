@@ -1,9 +1,11 @@
 ﻿using System.Collections;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reflection;
 using AventStack.ExtentReports;
 using OpenQA.Selenium;
 using OpenQA.Selenium.DevTools;
+using static System.Int64;
 
 namespace SwagLabsAutomation.Utils;
 
@@ -129,8 +131,8 @@ public class BiDiHandler : IDisposable
         // Ordenar versões em ordem decrescente
         devToolsVersions.Sort((a, b) => 
         {
-            if (int.TryParse(a.Substring(1), out int versionA) && 
-                int.TryParse(b.Substring(1), out int versionB))
+            if (int.TryParse(a.AsSpan(1), out var versionA) && 
+                int.TryParse(b.AsSpan(1), out var versionB))
             {
                 return versionB.CompareTo(versionA);
             }
@@ -149,13 +151,14 @@ public class BiDiHandler : IDisposable
         _consoleAdapterType = seleniumAssembly.GetType($"OpenQA.Selenium.DevTools.{version}.Console.ConsoleAdapter");
         _performanceAdapterType = seleniumAssembly.GetType($"OpenQA.Selenium.DevTools.{version}.Performance.PerformanceAdapter");
         _runtimeAdapterType = seleniumAssembly.GetType($"OpenQA.Selenium.DevTools.{version}.Runtime.RuntimeAdapter");
-        
+    
         bool allTypesFound = _networkAdapterType != null && _consoleAdapterType != null && 
                              _performanceAdapterType != null && _runtimeAdapterType != null;
-        
+    
         if (allTypesFound)
         {
             LogInfo($"Todos os adaptadores encontrados para versão {version}");
+            FindNetworkInterface(seleniumAssembly, version);
         }
         else
         {
@@ -181,13 +184,11 @@ public class BiDiHandler : IDisposable
         try
         {
             _networkRequests.Clear();
-            
-            var network = GetVersionSpecificDomain<object>(_session, _networkAdapterType);
-            if (network == null) return;
-            
+    // Aqui está a correção: use a interface INetwork
+    var network = GetVersionSpecificDomain<object>(_session, _networkAdapterType);    if (network == null) return;
             // Habilitar o domínio Network
             EnableNetworkDomain(network);
-            
+        
             // Registrar eventos
             if (RegisterNetworkEvents(network))
             {
@@ -198,6 +199,24 @@ public class BiDiHandler : IDisposable
         catch (Exception ex)
         {
             LogError($"Erro ao ativar monitoramento de rede: {ex.Message}");
+        }
+    }
+    
+    private void FindNetworkInterface(Assembly seleniumAssembly, string version)
+    {
+        var networkNamespace = $"OpenQA.Selenium.DevTools.{version}.Network";
+
+        foreach (var type in seleniumAssembly.GetTypes())
+        {
+            if (type.Namespace == null || !type.Namespace.StartsWith(networkNamespace) || !type.IsInterface ||
+                !type.Name.StartsWith("I")) continue;
+            LogInfo($"Interface de rede encontrada: {type.FullName}");
+            var interfaceType = type.FullName;
+            if (interfaceType == null) continue;
+            var genericDomain = GetVersionSpecificDomain<object>(_session, Type.GetType(interfaceType)!);
+            if (genericDomain == null) continue;
+            LogInfo($"Domínio de rede inicializado usando {interfaceType}");
+            EnableNetworkDomain(genericDomain);
         }
     }
 
@@ -450,11 +469,9 @@ public class BiDiHandler : IDisposable
             enableMethod.Invoke(console, null);
             
             // Registrar evento MessageAdded
-            if (RegisterConsoleEvents(console))
-            {
-                _isConsoleMonitoringEnabled = true;
-                LogInfo("Monitoramento de console ativado com sucesso");
-            }
+            if (!RegisterConsoleEvents(console)) return;
+            _isConsoleMonitoringEnabled = true;
+            LogInfo("Monitoramento de console ativado com sucesso");
         }
         catch (Exception ex)
         {
@@ -528,7 +545,7 @@ public class BiDiHandler : IDisposable
                 var lineValue = lineProperty.GetValue(message);
                 if (lineValue != null)
                 {
-                    long.TryParse(lineValue.ToString(), out line);
+                    TryParse(lineValue.ToString(), out line);
                 }
             }
             
@@ -796,20 +813,18 @@ public class BiDiHandler : IDisposable
     /// <summary>
     /// Obtém um domínio específico da versão do DevTools
     /// </summary>
-    private T? GetVersionSpecificDomain<T>(DevToolsSession session, Type adapterType)
+    private T? GetVersionSpecificDomain<T>(DevToolsSession? session, Type adapterType)
     {
         try
         {
+            Debug.Assert(session != null, nameof(session) + " != null");
             var getVersionSpecificDomains = session.GetType().GetMethod("GetVersionSpecificDomains")
                 ?.MakeGenericMethod(adapterType);
-            
-            if (getVersionSpecificDomains == null)
-            {
-                LogWarning($"Método GetVersionSpecificDomains não encontrado para {adapterType.Name}");
-                return default;
-            }
-            
-            return (T?)getVersionSpecificDomains.Invoke(session, null);
+
+            if (getVersionSpecificDomains != null) return (T?)getVersionSpecificDomains.Invoke(session, null);
+            LogWarning($"Método GetVersionSpecificDomains não encontrado para {adapterType.Name}");
+            return default;
+
         }
         catch (Exception ex)
         {
@@ -983,11 +998,11 @@ public class BiDiHandler : IDisposable
                    $"{failedRequests} falhas | {pendingRequests} pendentes</div>");
         
         // Detalhar falhas se houver
-        if (failedRequests > 0)
+        if (failedRequests <= 0) return;
         {
             var failedRequestsList = _networkRequests
                 .Where(r => r.Status == "Failed" || 
-                    (int.TryParse(r.Status, out int statusCode) && statusCode >= 400))
+                            (int.TryParse(r.Status, out int statusCode) && statusCode >= 400))
                 .OrderByDescending(r => r.Timestamp)
                 .ToList();
             
@@ -1012,7 +1027,7 @@ public class BiDiHandler : IDisposable
         _test.Info($"<div>Console: {_consoleMessages.Count} mensagens | {errorCount} erros | {warningCount} avisos</div>");
         
         // Detalhar erros se houver
-        if (errorCount > 0)
+        if (errorCount <= 0) return;
         {
             var errorMessages = _consoleMessages
                 .Where(m => m.Level.ToLower() == "error")
