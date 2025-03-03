@@ -1,5 +1,6 @@
 ﻿using SwagLabsAutomation.Pages;
 using SwagLabsAutomation.Utils;
+using static NUnit.Framework.Assert;
 using By = OpenQA.Selenium.By;
 
 namespace SwagLabsAutomation.Tests;
@@ -9,36 +10,42 @@ public class ProductTests : TestBase
 {
     private LoginPage _loginPage;
     private ProductsPage _productsPage;
+    private static readonly string[] Action =
+    [
+        "sauce-labs-backpack",
+                "sauce-labs-bike-light",
+                "sauce-labs-bolt-t-shirt"
+    ];
 
     [SetUp]
     public void SetupTest()
     {
-        // Inicialização e login antes de cada teste
+        // Initialization and login before each test
         _loginPage = new LoginPage(Driver);
         _loginPage.NavigateToLoginPage();
-        LogInfo("Realizando login com usuário padrão");
+        LogInfo("Performing login with standard user");
         _productsPage = _loginPage.Login("standard_user", "secret_sauce");
         
-        // Verificar se o login foi bem-sucedido
-        Assert.That(_productsPage.IsOnProductsPage(), Is.True, 
-            "Falha ao acessar a página de produtos após o login");
-        LogInfo("Login realizado com sucesso, página de produtos carregada");
+        // Verify login was successful
+        That(_productsPage.IsOnProductsPage(), Is.True, 
+            "Failed to access products page after login");
+        LogInfo("Login successful, products page loaded");
     }
 
     [Test]
-    [Description("Verifica se todos os produtos são exibidos corretamente")]
-    public void VerificarExibicaoDeProdutos()
+    [Description("Verifies all products are displayed correctly")]
+    public void VerifyProductsDisplay()
     {
-        LogStep("Verificando exibição de produtos", () => {
-            // Obter a lista de nomes de produtos
-            var nomesProdutos = _productsPage.GetAllProductNames();
+        LogStep("Verifying products display", () => {
+            // Get list of product names
+            var productNames = _productsPage.GetAllProductNames();
             
-            // Verificar se há produtos exibidos
-            Assert.That(nomesProdutos, Is.Not.Empty, "Nenhum produto foi exibido na página");
-            LogInfo($"Encontrados {nomesProdutos.Count} produtos na página");
+            // Verify products are displayed
+            That(productNames, Is.Not.Empty, "No products displayed on page");
+            LogInfo($"Found {productNames.Count} products on page");
             
-            // Verificar se produtos específicos estão presentes na lista
-            var produtosEsperados = new[] {
+            // Verify specific products are present in the list
+            var expectedProducts = new[] {
                 "Sauce Labs Backpack",
                 "Sauce Labs Bike Light",
                 "Sauce Labs Bolt T-Shirt",
@@ -47,310 +54,296 @@ public class ProductTests : TestBase
                 "Test.allTheThings() T-Shirt (Red)"
             };
             
-            foreach (var produto in produtosEsperados)
+            foreach (var product in expectedProducts)
             {
-                Assert.That(nomesProdutos, Does.Contain(produto), 
-                    $"Produto '{produto}' não encontrado na lista de produtos");
-                LogInfo($"Produto '{produto}' encontrado com sucesso");
+                That(productNames, Does.Contain(product), 
+                    $"Product '{product}' not found in products list");
+                LogInfo($"Product '{product}' found successfully");
             }
             
-            // Verificar se o número total de produtos é o esperado
-            Assert.That(nomesProdutos.Count, Is.EqualTo(produtosEsperados.Length),
-                "O número de produtos exibidos não corresponde ao esperado");
+            // Verify total number of products matches expected
+            That(productNames.Count, Is.EqualTo(expectedProducts.Length),
+                "Number of displayed products does not match expected count");
             
-            LogPass("Todos os produtos estão sendo exibidos corretamente");
+            LogPass("All products are displayed correctly");
         });
     }
 
     [Test]
-    [Description("Verifica a ordenação de produtos de A-Z")]
-    public void OrdenarProdutosAZ()
+    [Description("Verifies product sorting from A-Z")]
+    public void SortProductsAZ()
     {
-        LogStep("Ordenando produtos de A-Z", () => {
-            // Garantir que a ordenação está em A-Z (padrão)
+        LogStep("Sorting products A-Z", () => {
+            // Ensure sorting is A-Z (default)
             _productsPage.SortProductsBy("az");
-            LogInfo("Produtos ordenados de A-Z");
+            LogInfo("Products sorted A-Z");
             
-            // Obter a lista de nomes após a ordenação
-            var nomesProdutos = _productsPage.GetAllProductNames();
+            // Get list of names after sorting
+            var productNames = _productsPage.GetAllProductNames();
             
-            // Criar uma cópia ordenada para comparação
-            var nomesProdutosOrdenados = new List<string>(nomesProdutos);
-            nomesProdutosOrdenados.Sort(StringComparer.Ordinal);
+            // Create sorted copy for comparison
+            var sortedProductNames = new List<string>(productNames);
+            sortedProductNames.Sort(StringComparer.Ordinal);
             
-            // Verificar se a ordenação está correta
-            Assert.That(nomesProdutos, Is.EqualTo(nomesProdutosOrdenados),
-                "Os produtos não estão ordenados corretamente de A-Z");
+            // Verify sorting is correct
+            That(productNames, Is.EqualTo(sortedProductNames),
+                "Products are not correctly sorted A-Z");
             
-            LogPass("Produtos ordenados corretamente de A-Z");
+            LogPass("Products correctly sorted A-Z");
         });
     }
 
     [Test]
-    [Description("Verifica a ordenação de produtos de Z-A")]
-    public void OrdenarProdutosZA()
+    [Description("Verifies product sorting from Z-A")]
+    public void SortProductsZA()
     {
-        LogStep("Ordenando produtos de Z-A", () => {
-            // Aplicar ordenação Z-A
+        LogStep("Sorting products Z-A", () => {
+            // Apply Z-A sorting
             _productsPage.SortProductsBy("za");
-            LogInfo("Produtos ordenados de Z-A");
+            LogInfo("Products sorted Z-A");
             
-            // Obter a lista de nomes após a ordenação
-            var nomesProdutos = _productsPage.GetAllProductNames();
+            // Get list of names after sorting
+            var productNames = _productsPage.GetAllProductNames();
             
-            // Criar uma cópia ordenada para comparação
-            var nomesProdutosOrdenados = new List<string>(nomesProdutos);
-            nomesProdutosOrdenados.Sort(StringComparer.Ordinal);
-            nomesProdutosOrdenados.Reverse(); // Inverter para Z-A
+            // Create sorted copy for comparison
+            var sortedProductNames = new List<string>(productNames);
+            sortedProductNames.Sort(StringComparer.Ordinal);
+            sortedProductNames.Reverse(); // Reverse for Z-A
             
-            // Verificar se a ordenação está correta
-            Assert.That(nomesProdutos, Is.EqualTo(nomesProdutosOrdenados),
-                "Os produtos não estão ordenados corretamente de Z-A");
+            // Verify sorting is correct
+            That(productNames, Is.EqualTo(sortedProductNames),
+                "Products are not correctly sorted Z-A");
             
-            LogPass("Produtos ordenados corretamente de Z-A");
+            LogPass("Products correctly sorted Z-A");
         });
     }
 
     [Test]
-    [Description("Verifica a ordenação de produtos por preço (menor para maior)")]
-    public void OrdenarProdutosPorPrecoAscendente()
+    [Description("Verifies product sorting by price (low to high)")]
+    public void SortProductsByPriceAscending()
     {
-        LogStep("Ordenando produtos por preço (menor para maior)", () => {
-            // Aplicar ordenação por preço (menor para maior)
+        LogStep("Sorting products by price (low to high)", () => {
+            // Apply price sorting (low to high)
             _productsPage.SortProductsBy("lohi");
-            LogInfo("Produtos ordenados por preço (menor para maior)");
+            LogInfo("Products sorted by price (low to high)");
             
-            // Esta verificação requer implementação adicional na ProductsPage
-            // para obter os preços dos produtos
-            // Por enquanto, vamos verificar se a página não quebra com essa ordenação
-            Assert.That(_productsPage.IsOnProductsPage(), Is.True,
-                "A página de produtos não está mais acessível após a ordenação por preço");
+            // Verify the page doesn't break with this sorting
+            That(_productsPage.IsOnProductsPage(), Is.True,
+                "Products page is no longer accessible after price sorting");
             
-            LogPass("Ordenação por preço aplicada com sucesso");
+            LogPass("Price sorting applied successfully");
         });
     }
 
     [Test]
-    [Description("Verifica a ordenação de produtos por preço (maior para menor)")]
-    public void OrdenarProdutosPorPrecoDescendente()
+    [Description("Verifies product sorting by price (high to low)")]
+    public void SortProductsByPriceDescending()
     {
-        LogStep("Ordenando produtos por preço (maior para menor)", () => {
-            // Aplicar ordenação por preço (maior para menor)
+        LogStep("Sorting products by price (high to low)", () => {
+            // Apply price sorting (high to low)
             _productsPage.SortProductsBy("hilo");
-            LogInfo("Produtos ordenados por preço (maior para menor)");
+            LogInfo("Products sorted by price (high to low)");
             
-            // Esta verificação requer implementação adicional na ProductsPage
-            // para obter os preços dos produtos
-            // Por enquanto, vamos verificar se a página não quebra com essa ordenação
-            Assert.That(_productsPage.IsOnProductsPage(), Is.True,
-                "A página de produtos não está mais acessível após a ordenação por preço");
+            // Verify the page doesn't break with this sorting
+            That(_productsPage.IsOnProductsPage(), Is.True,
+                "Products page is no longer accessible after price sorting");
             
-            LogPass("Ordenação por preço aplicada com sucesso");
+            LogPass("Price sorting applied successfully");
         });
     }
 
     [Test]
-    [Description("Verifica a adição de múltiplos produtos ao carrinho")]
-    public void AdicionarMultiplosProdutosAoCarrinho()
+    [Description("Verifies adding multiple products to cart")]
+    public void AddMultipleProductsToCart()
     {
-        LogStep("Adicionando múltiplos produtos ao carrinho", () => {
-            // Lista de produtos para adicionar
-            var produtosParaAdicionar = new[] {
-                "sauce-labs-backpack",
-                "sauce-labs-bike-light",
-                "sauce-labs-bolt-t-shirt"
-            };
+        LogStep("Adding multiple products to cart", () => {
+            // List of products to add
+            var productsToAdd = Action;
             
-            // Verificar que o carrinho está vazio inicialmente
-            Assert.That(_productsPage.GetCartCount(), Is.EqualTo(0),
-                "O carrinho não está vazio no início do teste");
+            // Verify cart is initially empty
+            That(_productsPage.GetCartCount(), Is.EqualTo(0),
+                "Cart is not empty at test start");
             
-            // Adicionar cada produto ao carrinho
-            foreach (var produto in produtosParaAdicionar)
+            // Add each product to cart
+            foreach (var product in productsToAdd)
             {
-                _productsPage.AddProductToCart(produto);
-                LogInfo($"Produto '{produto}' adicionado ao carrinho");
+                _productsPage.AddProductToCart(product);
+                LogInfo($"Product '{product}' added to cart");
             }
             
-            // Verificar se o contador do carrinho foi atualizado corretamente
-            Assert.That(_productsPage.GetCartCount(), Is.EqualTo(produtosParaAdicionar.Length),
-                "O contador do carrinho não reflete o número correto de itens adicionados");
+            // Verify cart counter was updated correctly
+            That(_productsPage.GetCartCount(), Is.EqualTo(productsToAdd.Length),
+                "Cart counter does not reflect correct number of added items");
             
-            LogPass($"{produtosParaAdicionar.Length} produtos adicionados ao carrinho com sucesso");
+            LogPass($"{productsToAdd.Length} products successfully added to cart");
         });
     }
 
     [Test]
-    [Description("Verifica a remoção de produtos do carrinho na página de produtos")]
-    public void RemoverProdutosDoCarrinhoNaPaginaDeProdutos()
+    [Description("Verifies removing products from cart on products page")]
+    public void RemoveProductsFromCartOnProductsPage()
     {
-        LogStep("Testando remoção de produtos na página de produtos", () => {
-            // Adicionar produto ao carrinho
-            string produtoId = "sauce-labs-backpack";
-            _productsPage.AddProductToCart(produtoId);
-            LogInfo($"Produto '{produtoId}' adicionado ao carrinho");
+        LogStep("Testing product removal on products page", () => {
+            // Add product to cart
+            const string productId = "sauce-labs-backpack";
+            _productsPage.AddProductToCart(productId);
+            LogInfo($"Product '{productId}' added to cart");
             
-            // Verificar se o produto foi adicionado
-            Assert.That(_productsPage.GetCartCount(), Is.EqualTo(1),
-                "O produto não foi adicionado ao carrinho");
+            // Verify product was added
+            That(_productsPage.GetCartCount(), Is.EqualTo(1),
+                "Product was not added to cart");
+
+            Driver!.FindElement(By.Id($"remove-{productId}")).Click();
+            LogInfo($"Product '{productId}' removed from cart");
             
-            // Remover produto do carrinho (é necessário implementar este método na ProductsPage)
-            // Por exemplo: _productsPage.RemoveProductFromCart(produtoId);
-            // Como alternativa, usaremos o locator do botão de remover diretamente
-            Driver.FindElement(By.Id($"remove-{produtoId}")).Click();
-            LogInfo($"Produto '{produtoId}' removido do carrinho");
+            // Verify product was removed
+            That(_productsPage.GetCartCount(), Is.EqualTo(0),
+                "Product was not removed from cart");
             
-            // Verificar se o produto foi removido
-            Assert.That(_productsPage.GetCartCount(), Is.EqualTo(0),
-                "O produto não foi removido do carrinho");
-            
-            LogPass("Produto removido do carrinho com sucesso");
+            LogPass("Product successfully removed from cart");
         });
     }
 
     [Test]
-    [Description("Verifica a navegação para a página de detalhes do produto")]
-    public void NavegarParaDetalhesDoProduto()
+    [Description("Verifies navigation to product details page")]
+    public void NavigateToProductDetails()
     {
-        LogStep("Testando navegação para detalhes do produto", () => {
-            // Este teste exige implementação adicional na ProductsPage para clicar no nome
-            // ou imagem do produto. Por enquanto, vamos simular isso com JavaScript
-            // Primeiro, vamos obter o elemento do primeiro produto
+        LogStep("Testing navigation to product details", () => {
+            // First, get the first product element
             var driver = this.Driver;
-            var firstProductName = driver.FindElement(By.CssSelector(".inventory_item_name"));
-            string productTitle = firstProductName.Text;
-            LogInfo($"Clicando no produto: {productTitle}");
+            var firstProductName = driver!.FindElement(By.CssSelector(".inventory_item_name"));
+            var productTitle = firstProductName.Text;
+            LogInfo($"Clicking on product: {productTitle}");
             
-            // Clicar no nome do produto
+            // Click on product name
             firstProductName.Click();
-            LogInfo("Redirecionando para a página de detalhes");
+            LogInfo("Redirecting to details page");
             
-            // Verificar se estamos na página de detalhes
-            // Isso requer uma implementação adicional ou podemos verificar pela URL ou elementos
-            bool isOnDetailsPage = driver.Url.Contains("inventory-item.html");
-            Assert.That(isOnDetailsPage, Is.True, 
-                "Não foi redirecionado para a página de detalhes do produto");
+            // Verify we're on details page
+            var isOnDetailsPage = driver.Url.Contains("inventory-item.html");
+            That(isOnDetailsPage, Is.True, 
+                "Not redirected to product details page");
             
-            // Verificar se o título do produto está presente na página de detalhes
+            // Verify product title is present on details page
             var detailsTitle = driver.FindElement(By.CssSelector(".inventory_details_name"));
-            Assert.That(detailsTitle.Text, Is.EqualTo(productTitle),
-                "O título do produto na página de detalhes não corresponde ao esperado");
+            That(detailsTitle.Text, Is.EqualTo(productTitle),
+                "Product title on details page does not match expected");
             
-            LogPass("Navegação para detalhes do produto realizada com sucesso");
+            LogPass("Navigation to product details successful");
         });
     }
 
     [Test]
-    [Description("Verifica se as imagens dos produtos são carregadas corretamente")]
-    public void VerificarImagensProdutos()
+    [Description("Verifies product images are loaded correctly")]
+    public void VerifyProductImages()
     {
-        LogStep("Verificando se as imagens dos produtos são carregadas", () => {
-            // Obter todas as imagens de produtos
+        LogStep("Verifying product images are loaded", () => {
+            // Get all product images
             var driver = this.Driver;
-            var productImages = driver.FindElements(By.CssSelector(".inventory_item_img img"));
-            LogInfo($"Encontradas {productImages.Count} imagens de produtos");
+            var productImages = driver!.FindElements(By.CssSelector(".inventory_item_img img"));
+            LogInfo($"Found {productImages.Count} product images");
             
-            // Verificar se todas as imagens possuem um atributo src válido
+            // Verify all images have valid src attribute
             foreach (var img in productImages)
             {
-                string src = img.GetAttribute("src");
-                Assert.That(src, Is.Not.Null.And.Not.Empty,
-                    "Imagem do produto sem atributo src válido");
-                Assert.That(src, Does.Contain("/static/media/"),
-                    "O caminho da imagem não corresponde ao padrão esperado");
+                var src = img.GetAttribute("src");
+                That(src, Is.Not.Null.And.Not.Empty,
+                    "Product image missing valid src attribute");
+                That(src, Does.Contain("/static/media/"),
+                    "Image path does not match expected pattern");
                 
-                // Verificar se a imagem não exibe quebrada (isso é mais complexo e pode exigir JavaScript)
-                bool isDisplayed = img.Displayed;
-                Assert.That(isDisplayed, Is.True, "A imagem do produto não está sendo exibida");
+                // Verify image is not broken (more complex and may require JavaScript)
+                var isDisplayed = img.Displayed;
+                That(isDisplayed, Is.True, "Product image is not displayed");
             }
             
-            LogPass("Todas as imagens dos produtos estão sendo carregadas corretamente");
+            LogPass("All product images are loading correctly");
         });
     }
 
     [Test]
-    [Description("Verifica se a descrição dos produtos é exibida corretamente")]
-    public void VerificarDescricaoProdutos()
+    [Description("Verifies product descriptions are displayed correctly")]
+    public void VerifyProductDescriptions()
     {
-        LogStep("Verificando descrições dos produtos", () => {
-            // Obter todas as descrições de produtos
+        LogStep("Verifying product descriptions", () => {
+            // Get all product descriptions
             var driver = this.Driver;
-            var productDescs = driver.FindElements(By.CssSelector(".inventory_item_desc"));
-            LogInfo($"Encontradas {productDescs.Count} descrições de produtos");
+            var productDescs = driver!.FindElements(By.CssSelector(".inventory_item_desc"));
+            LogInfo($"Found {productDescs.Count} product descriptions");
             
-            // Verificar se todas as descrições possuem conteúdo
+            // Verify all descriptions have content
             foreach (var desc in productDescs)
             {
-                string text = desc.Text;
-                Assert.That(text, Is.Not.Null.And.Not.Empty,
-                    "Descrição do produto vazia");
+                var text = desc.Text;
+                That(text, Is.Not.Null.And.Not.Empty,
+                    "Empty product description");
                 
-                // Verificar comprimento mínimo razoável para uma descrição
-                Assert.That(text.Length, Is.GreaterThan(10),
-                    "Descrição do produto muito curta, pode indicar problema");
+                // Verify reasonable minimum length for description
+                That(text, Has.Length.GreaterThan(10),
+                    "Product description too short, may indicate a problem");
             }
             
-            LogPass("Todas as descrições dos produtos estão sendo exibidas corretamente");
+            LogPass("All product descriptions are displayed correctly");
         });
     }
 
     [Test]
-    [Description("Verifica se os preços dos produtos são exibidos corretamente")]
-    public void VerificarPrecosProdutos()
+    [Description("Verifies product prices are displayed correctly")]
+    public void VerifyProductPrices()
     {
-        LogStep("Verificando preços dos produtos", () => {
-            // Obter todos os preços de produtos
+        LogStep("Verifying product prices", () => {
+            // Get all product prices
             var driver = this.Driver;
-            var productPrices = driver.FindElements(By.CssSelector(".inventory_item_price"));
-            LogInfo($"Encontrados {productPrices.Count} preços de produtos");
+            var productPrices = driver!.FindElements(By.CssSelector(".inventory_item_price"));
+            LogInfo($"Found {productPrices.Count} product prices");
             
-            // Verificar se todos os preços seguem o formato esperado ($XX.XX)
+            // Verify all prices follow expected format ($XX.XX)
             foreach (var price in productPrices)
             {
-                string priceText = price.Text;
-                Assert.That(priceText, Does.StartWith("$"),
-                    "Preço não começa com o símbolo de dólar ($)");
+                var priceText = price.Text;
+                That(priceText, Does.StartWith("$"),
+                    "Price does not start with dollar symbol ($)");
                 
-                // Extrair o valor numérico e verificar se é um número válido
-                string numericPart = priceText.Substring(1);
-                Assert.That(double.TryParse(numericPart, out double priceValue), Is.True,
-                    $"Não foi possível converter '{numericPart}' para um valor numérico");
+                // Extract numeric value and verify it's a valid number
+                var numericPart = priceText[1..];
+                That(double.TryParse(numericPart, out var priceValue), Is.True,
+                    $"Could not convert '{numericPart}' to numeric value");
                 
-                // Verificar se o preço é razoável (maior que zero)
-                Assert.That(priceValue, Is.GreaterThan(0),
-                    "Preço do produto não é maior que zero");
+                // Verify price is reasonable (greater than zero)
+                That(priceValue, Is.GreaterThan(0),
+                    "Product price is not greater than zero");
             }
             
-            LogPass("Todos os preços dos produtos estão sendo exibidos corretamente");
+            LogPass("All product prices are displayed correctly");
         });
     }
 
     [Test]
-    [Description("Verifica o botão Back To Products na página de detalhes")]
-    public void TestarBotaoBackToProducts()
+    [Description("Verifies Back To Products button on details page")]
+    public void TestBackToProductsButton()
     {
-        LogStep("Testando botão Back To Products", () => {
-            // Primeiro, navegar para a página de detalhes de um produto
+        LogStep("Testing Back To Products button", () => {
+            // First, navigate to product details page
             var driver = this.Driver;
-            var firstProductName = driver.FindElement(By.CssSelector(".inventory_item_name"));
+            var firstProductName = driver!.FindElement(By.CssSelector(".inventory_item_name"));
             firstProductName.Click();
-            LogInfo("Navegado para a página de detalhes do produto");
+            LogInfo("Navigated to product details page");
             
-            // Verificar se estamos na página de detalhes
-            bool isOnDetailsPage = driver.Url.Contains("inventory-item.html");
-            Assert.That(isOnDetailsPage, Is.True,
-                "Não foi redirecionado para a página de detalhes do produto");
+            // Verify we're on details page
+            var isOnDetailsPage = driver.Url.Contains("inventory-item.html");
+            That(isOnDetailsPage, Is.True,
+                "Not redirected to product details page");
             
-            // Clicar no botão Back To Products
+            // Click Back To Products button
             var backButton = driver.FindElement(By.Id("back-to-products"));
             backButton.Click();
-            LogInfo("Clicado no botão Back To Products");
+            LogInfo("Clicked Back To Products button");
             
-            // Verificar se voltamos para a página de produtos
-            Assert.That(_productsPage.IsOnProductsPage(), Is.True,
-                "Não voltou para a página de produtos após clicar em Back To Products");
+            // Verify we're back on products page
+            That(_productsPage.IsOnProductsPage(), Is.True,
+                "Did not return to products page after clicking Back To Products");
             
-            LogPass("Navegação de volta para a página de produtos realizada com sucesso");
+            LogPass("Navigation back to products page successful");
         });
     }
 }

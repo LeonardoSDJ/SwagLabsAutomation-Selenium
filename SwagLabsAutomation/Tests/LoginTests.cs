@@ -1,5 +1,4 @@
-﻿using NUnit.Framework;
-using SwagLabsAutomation.Pages;
+﻿using SwagLabsAutomation.Pages;
 using SwagLabsAutomation.Utils;
 
 namespace SwagLabsAutomation.Tests;
@@ -12,60 +11,60 @@ public class LoginTests : TestBase
     public void SetupTest()
     {
         _loginPage = new LoginPage(Driver);
-        LogInfo("Navegando para a página de login");
+        LogInfo("Navigating to login page");
         _loginPage.NavigateToLoginPage();
-        LogInfo("Página de login carregada");
+        LogInfo("Login page loaded");
     }
 
     [Test]
-    public void LoginComCredenciaisValidas()
+    public void LoginWithValidCredentials()
     {
         // Arrange
-        string username = "standard_user";
-        string password = "secret_sauce";
-        LogInfo($"Tentando login com usuário: {username}");
+        const string username = "standard_user";
+        const string password = "secret_sauce";
+        LogInfo($"Attempting login with user: {username}");
 
         // Act
-        LogInfo("Realizando login");
+        LogInfo("Performing login");
         var productsPage = _loginPage.Login(username, password);
 
         // Assert
-        LogInfo("Verificando redirecionamento para a página de produtos");
-        bool isOnProductsPage = productsPage.IsOnProductsPage();
-        Assert.That(isOnProductsPage, Is.True, "Login falhou, não redirecionou para a página de produtos.");
+        LogInfo("Verifying redirection to products page");
+        var isOnProductsPage = productsPage.IsOnProductsPage();
+        Assert.That(isOnProductsPage, Is.True, "Login failed, did not redirect to products page.");
 
         if (isOnProductsPage)
-            LogPass("Login realizado com sucesso, redirecionado para página de produtos");
+            LogPass("Login successful, redirected to products page");
         else
-            LogFail("Falha no redirecionamento após login");
+            LogFail("Failed to redirect after login");
     }
 
     [Test]
-    public void LoginComCredenciaisInvalidas()
+    public void LoginWithInvalidCredentials()
     {
         // Arrange
-        string username = "invalid_user";
-        string password = "invalid_password";
-        LogInfo($"Tentando login com credenciais inválidas: {username}");
+        const string username = "invalid_user";
+        const string password = "invalid_password";
+        LogInfo($"Attempting login with invalid credentials: {username}");
 
         // Act
-        LogInfo("Realizando login com credenciais inválidas");
+        LogInfo("Performing login with invalid credentials");
         _loginPage.Login(username, password);
 
-        LogInfo("Verificando mensagem de erro");
-        string errorMessage = _loginPage.GetErrorMessage();
-        LogInfo($"Mensagem de erro obtida: '{errorMessage}'");
+        LogInfo("Checking error message");
+        var errorMessage = _loginPage.GetErrorMessage();
+        LogInfo($"Error message received: '{errorMessage}'");
 
         // Assert
-        LogInfo("Verificando se permaneceu na página de login");
-        bool isOnLoginPage = _loginPage.IsOnLoginPage();
-        Assert.That(isOnLoginPage, Is.True, "Não permaneceu na página de login após tentativa com credenciais inválidas.");
+        LogInfo("Verifying stayed on login page");
+        var isOnLoginPage = _loginPage.IsOnLoginPage();
+        Assert.That(isOnLoginPage, Is.True, "Did not remain on login page after attempt with invalid credentials.");
 
-        LogInfo("Verificando conteúdo da mensagem de erro");
-        bool containsErrorMessage = errorMessage.Contains("Username and password do not match");
-        Assert.That(containsErrorMessage, Is.True, "Mensagem de erro incorreta ou não exibida.");
+        LogInfo("Verifying error message content");
+        var containsErrorMessage = errorMessage.Contains("Username and password do not match");
+        Assert.That(containsErrorMessage, Is.True, "Incorrect error message or not displayed.");
 
         if (isOnLoginPage && containsErrorMessage)
-            LogPass("Teste de login inválido concluído com sucesso");
+            LogPass("Invalid login test completed successfully");
     }
 }

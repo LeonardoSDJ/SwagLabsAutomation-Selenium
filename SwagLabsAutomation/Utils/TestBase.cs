@@ -12,19 +12,19 @@ namespace SwagLabsAutomation.Utils
         [SetUp]
         public virtual void Setup()
         {
-            // Inicializa o teste do ExtentReports
+            // Initialize ExtentReports test
             Test = ExtentReportManager.CreateTest(TestContext.CurrentContext.Test.Name);
-            Test.Info("Iniciando teste");
+            Test.Info("Starting test");
 
             try
             {
-                // Usar exclusivamente o DriverFactory para obter o driver
+                // Use DriverFactory exclusively to get driver
                 Driver = DriverFactory.GetDriver();
-                Test.Info("Browser iniciado e configurado");
+                Test.Info("Browser started and configured");
             }
             catch (Exception ex)
             {
-                Test.Fail($"Falha ao inicializar o browser: {ex.Message}");
+                Test.Fail($"Failed to initialize browser: {ex.Message}");
                 throw;
             }
         }
@@ -39,28 +39,28 @@ namespace SwagLabsAutomation.Utils
 
                 if (status == TestStatus.Failed)
                 {
-                    Test.Fail($"Teste falhou: {errorMessage}");
+                    Test.Fail($"Test failed: {errorMessage}");
                     CaptureScreenshot();
                 }
                 else if (status == TestStatus.Passed)
                 {
-                    Test.Pass("Teste concluído com sucesso");
+                    Test.Pass("Test completed successfully");
                 }
                 else
                 {
-                    Test.Skip("Teste foi ignorado");
+                    Test.Skip("Test was skipped");
                 }
         
-                // Explicitamente fazer o Flush do ExtentReport
+                // Explicitly flush ExtentReport
                 ExtentReportManager.GetInstance().Flush();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Erro durante TearDown: {ex.Message}");
+                Console.WriteLine($"Error during TearDown: {ex.Message}");
             }
             finally
             {
-                // Explicitamente fazer o Dispose do driver (necessário para o NUnit)
+                // Explicitly dispose driver (necessary for NUnit)
                 if (Driver != null)
                 {
                     try { Driver.Dispose(); }
@@ -72,12 +72,12 @@ namespace SwagLabsAutomation.Utils
                     Driver = null;
                 }
 
-                // Delega a limpeza para o DriverFactory
+                // Delegate cleanup to DriverFactory
                 DriverFactory.QuitDriver();
             }
         }
 
-        protected void CaptureScreenshot()
+        private void CaptureScreenshot()
         {
             try
             {
@@ -96,16 +96,16 @@ namespace SwagLabsAutomation.Utils
                 var screenshot = ((ITakesScreenshot)Driver).GetScreenshot();
                 screenshot.SaveAsFile(screenshotPath);
 
-                Test.AddScreenCaptureFromPath(screenshotPath, "Screenshot no momento da falha");
-                Console.WriteLine($"Screenshot salvo em: {screenshotPath}");
+                Test.AddScreenCaptureFromPath(screenshotPath, "Screenshot at failure moment");
+                Console.WriteLine($"Screenshot saved at: {screenshotPath}");
             }
             catch (Exception ex)
             {
-                Test.Error($"Falha ao capturar screenshot: {ex.Message}");
+                Test.Error($"Failed to capture screenshot: {ex.Message}");
             }
         }
 
-        // Métodos auxiliares para registrar informações de teste
+        // Helper methods to log test information
         protected void LogInfo(string message)
         {
             Test.Info(message);
@@ -130,13 +130,13 @@ namespace SwagLabsAutomation.Utils
         {
             try
             {
-                Test.Info($"Passo: {stepName}");
+                Test.Info($"Step: {stepName}");
                 action();
-                Test.Pass($"Passo '{stepName}' executado com sucesso");
+                Test.Pass($"Step '{stepName}' executed successfully");
             }
             catch (Exception ex)
             {
-                Test.Fail($"Falha no passo '{stepName}': {ex.Message}");
+                Test.Fail($"Failed at step '{stepName}': {ex.Message}");
                 CaptureScreenshot();
                 throw;
             }
@@ -145,9 +145,9 @@ namespace SwagLabsAutomation.Utils
         protected void AddTestMetadata()
         {
             Test.Info($"<div style='background-color: #f5f5f5; padding: 10px; border-radius: 5px;'>" +
-                      $"<b>Início:</b> {DateTime.Now:dd/MM/yyyy HH:mm:ss}<br/>" +
-                      $"<b>Navegador:</b> Chrome<br/>" +
-                      $"<b>Usuário:</b> {Environment.UserName}" +
+                      $"<b>Start:</b> {DateTime.Now:dd/MM/yyyy HH:mm:ss}<br/>" +
+                      $"<b>Browser:</b> Chrome<br/>" +
+                      $"<b>User:</b> {Environment.UserName}" +
                       $"</div>");
         }
         
@@ -163,28 +163,28 @@ namespace SwagLabsAutomation.Utils
             finally
             {
                 stopwatch.Stop();
-                Test.Info($"Desempenho: '{operationName}' levou {stopwatch.ElapsedMilliseconds} ms");
+                Test.Info($"Performance: '{operationName}' took {stopwatch.ElapsedMilliseconds} ms");
             }
         }
 
-        // Método de limpeza global que será chamado uma vez após todos os testes
+        // Global cleanup method that will be called once after all tests
         [OneTimeTearDown]
         public void GlobalCleanup()
         {
             try
             {
-                // Garantir limpeza total
+                // Ensure complete cleanup
                 DriverFactory.QuitDriver();
                 
-                // Verificar e matar qualquer processo ChromeDriver que ainda exista
+                // Check and kill any ChromeDriver process that might still exist
                 DriverFactory.KillChromeProcesses();
                 
-                // Finalizar relatórios
+                // Finalize reports
                 ExtentReportManager.EndReport();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Erro durante limpeza global: {ex.Message}");
+                Console.WriteLine($"Error during global cleanup: {ex.Message}");
             }
         }
     }

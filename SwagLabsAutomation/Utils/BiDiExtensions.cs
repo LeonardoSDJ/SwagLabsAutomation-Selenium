@@ -4,17 +4,17 @@ using AventStack.ExtentReports;
 namespace SwagLabsAutomation.Utils;
 
 /// <summary>
-/// Métodos de extensão para facilitar o uso do BiDiHandler
+/// Extension methods to facilitate the use of BiDiHandler
 /// </summary>
 public static class BiDiExtensions
 {
     /// <summary>
-    /// Cria um BiDiHandler e configura o monitoramento de rede
+    /// Creates a BiDiHandler and configures network monitoring
     /// </summary>
-    /// <param name="driver">WebDriver em uso</param>
-    /// <param name="test">Test Extent para registrar informações</param>
-    /// <param name="enableNetwork">Ativar monitoramento de rede</param>
-    /// <returns>BiDiHandler configurado</returns>
+    /// <param name="driver">WebDriver in use</param>
+    /// <param name="test">Extent Test for logging information</param>
+    /// <param name="enableNetwork">Enable network monitoring</param>
+    /// <returns>Configured BiDiHandler</returns>
     public static BiDiHandler SetupBiDiMonitoring(
         this IWebDriver driver, 
         ExtentTest? test = null,
@@ -22,7 +22,7 @@ public static class BiDiExtensions
     {
         var handler = new BiDiHandler(driver, test);
         
-        // Testar conectividade com DevTools antes de prosseguir
+        // Test connectivity with DevTools before proceeding
         var devToolsAvailable = handler.TestDevToolsConnectivity();
         
         if (devToolsAvailable)
@@ -34,7 +34,7 @@ public static class BiDiExtensions
         }
         else
         {
-            // Fallback para implementação simplificada se DevTools não estiver disponível
+            // Fallback to simplified implementation if DevTools is not available
             handler.UseSimpleImplementation();
         }
         
@@ -42,32 +42,32 @@ public static class BiDiExtensions
     }
     
     /// <summary>
-    /// Adiciona informações de BiDi ao relatório e captura screenshots se houver erros
+    /// Adds BiDi information to the report and captures screenshots if there are errors
     /// </summary>
-    /// <param name="handler">BiDiHandler em uso</param>
-    /// <param name="testName">Nome do teste</param>
+    /// <param name="handler">BiDiHandler in use</param>
+    /// <param name="testName">Test name</param>
     public static void ProcessBiDiResults(this BiDiHandler handler, string testName)
     {
-        // Verificar erros e capturar screenshots relevantes
+        // Check for errors and capture relevant screenshots
         handler.CaptureErrorScreenshots(testName);
         
-        // Adicionar informações coletadas ao relatório
+        // Add collected information to the report
         handler.AddInfoToReport();
         
-        // Capturar screenshot final do teste
+        // Capture final test screenshot
         handler.CaptureScreenshot(testName);
         
-        // Desativar monitoramentos
+        // Disable monitoring
         handler.DisableAllMonitoring();
         
-        // Liberar recursos
+        // Release resources
         handler.Dispose();
     }
     
     /// <summary>
-    /// Configura monitoramento completo (rede, console e performance)
+    /// Configure complete monitoring (network, console, and performance)
     /// </summary>
-    /// <param name="handler">BiDiHandler a ser configurado</param>
+    /// <param name="handler">BiDiHandler to be configured</param>
     public static void EnableFullMonitoring(this BiDiHandler handler)
     {
         if (handler.TestDevToolsConnectivity())

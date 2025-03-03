@@ -15,67 +15,67 @@ namespace SwagLabsAutomation.Tests
             _loginPage = new LoginPage(Driver);
             _loginPage.NavigateToLoginPage();
             _productsPage = _loginPage.Login("standard_user", "secret_sauce");
-            Assert.That(_productsPage.IsOnProductsPage(), Is.True, "Falha ao fazer login para iniciar os testes de carrinho.");
+            Assert.That(_productsPage.IsOnProductsPage(), Is.True, "Failed to login to start cart tests.");
             
         }
 
         [Test]
-        public void AdicionarItemAoCarrinho()
+        public void AddItemToCart()
         {
-            // Arrange - Página de produtos já carregada após o SetUp
+            // Arrange - Products page already loaded after SetUp
 
-            // Act - Adicionar produto ao carrinho
+            // Act - Add product to cart
             _productsPage.AddProductToCart("sauce-labs-backpack");
 
-            // Assert - Verificar se o contador do carrinho foi atualizado
-            Assert.That(_productsPage.GetCartCount(), Is.EqualTo(1), "O contador do carrinho não foi atualizado corretamente.");
+            // Assert - Verify cart counter was updated
+            Assert.That(_productsPage.GetCartCount(), Is.EqualTo(1), "Cart counter was not updated correctly.");
         }
 
         [Test]
-        public void AdicionarMultiplosItens()
+        public void AddMultipleItems()
         {
-            // Act - Adicionar vários produtos
+            // Act - Add multiple products
             _productsPage.AddProductToCart("sauce-labs-backpack");
             _productsPage.AddProductToCart("sauce-labs-bike-light");
             _productsPage.AddProductToCart("sauce-labs-bolt-t-shirt");
 
-            // Assert - Verificar se o contador do carrinho foi atualizado
-            Assert.That(_productsPage.GetCartCount(), Is.EqualTo(3), "O contador do carrinho não reflete os 3 itens adicionados.");
+            // Assert - Verify cart counter was updated
+            Assert.That(_productsPage.GetCartCount(), Is.EqualTo(3), "Cart counter does not reflect the 3 added items.");
         }
 
         [Test]
-        public void IrParaCarrinhoEVoltarParaCompras()
+        public void GoToCartAndContinueShopping()
         {
-            // Arrange - Adicionar um item ao carrinho
+            // Arrange - Add an item to cart
             _productsPage.AddProductToCart("sauce-labs-backpack");
 
-            // Act - Ir para o carrinho
+            // Act - Go to cart
             _cartPage = _productsPage.GoToCart();
 
-            // Assert - Verificar se está na página do carrinho
-            Assert.That(_cartPage.IsOnCartPage(), Is.True, "Não foi redirecionado para a página do carrinho.");
-            Assert.That(_cartPage.GetNumberOfCartItems(), Is.EqualTo(1), "Número incorreto de itens no carrinho.");
+            // Assert - Verify we're on cart page
+            Assert.That(_cartPage.IsOnCartPage(), Is.True, "Was not redirected to cart page.");
+            Assert.That(_cartPage.GetNumberOfCartItems(), Is.EqualTo(1), "Incorrect number of items in cart.");
 
-            // Act - Voltar para continuar comprando
+            // Act - Return to continue shopping
             _productsPage = _cartPage.ContinueShopping();
 
-            // Assert - Verificar se voltou para a página de produtos
-            Assert.That(_productsPage.IsOnProductsPage(), Is.True, "Não voltou para a página de produtos.");
+            // Assert - Verify we're back on products page
+            Assert.That(_productsPage.IsOnProductsPage(), Is.True, "Did not return to products page.");
         }
 
         [Test]
-        public void RemoverItemDoCarrinho()
+        public void RemoveItemFromCart()
         {
-            // Arrange - Adicionar um item e ir para o carrinho
+            // Arrange - Add an item and go to cart
             _productsPage.AddProductToCart("sauce-labs-backpack");
             _cartPage = _productsPage.GoToCart();
-            Assert.That(_cartPage.GetNumberOfCartItems(), Is.EqualTo(1), "Item não foi adicionado ao carrinho corretamente.");
+            Assert.That(_cartPage.GetNumberOfCartItems(), Is.EqualTo(1), "Item was not added to cart correctly.");
 
-            // Act - Remover o item
+            // Act - Remove the item
             _cartPage.RemoveItemFromCart("sauce-labs-backpack");
 
-            // Assert - Verificar se o item foi removido
-            Assert.That(_cartPage.GetNumberOfCartItems(), Is.EqualTo(0), "O item não foi removido do carrinho.");
+            // Assert - Verify the item was removed
+            Assert.That(_cartPage.GetNumberOfCartItems(), Is.EqualTo(0), "The item was not removed from cart.");
         }
     }
 }

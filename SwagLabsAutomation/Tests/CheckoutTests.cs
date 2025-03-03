@@ -13,81 +13,81 @@ public class CheckoutTests : TestBase
     [SetUp]
     public void SetupTest()
     {
-        // Configuração inicial: Login e adicionar um produto ao carrinho
+        // Initial setup: Login and add a product to cart
         _loginPage = new LoginPage(Driver);
         _loginPage.NavigateToLoginPage();
         _productsPage = _loginPage.Login("standard_user", "secret_sauce");
 
-        // Adicionar produto ao carrinho
+        // Add product to cart
         _productsPage.AddProductToCart("sauce-labs-backpack");
         _cartPage = _productsPage.GoToCart();
     }
 
     [Test]
-    public void ProcessoDeCheckoutCompleto()
+    public void CompleteCheckoutProcess()
     {
-        // Act - Iniciar checkout
+        // Act - Start checkout
         _checkoutPage = _cartPage.GoToCheckout();
 
-        // Assert - Verificar se está na página de checkout step one
-        Assert.That(_checkoutPage.IsOnCheckoutStepOne(), Is.True, "Não foi redirecionado para a primeira etapa do checkout.");
+        // Assert - Verify we're on checkout step one page
+        Assert.That(_checkoutPage.IsOnCheckoutStepOne(), Is.True, "Was not redirected to checkout step one.");
 
-        // Act - Preencher informações pessoais e continuar
-        _checkoutPage.FillPersonalInfo("João", "Silva", "12345").ClickContinue();
+        // Act - Fill personal information and continue
+        _checkoutPage.FillPersonalInfo("John", "Smith", "12345").ClickContinue();
 
-        // Assert - Verificar se avançou para a página de revisão
-        Assert.That(_checkoutPage.IsOnCheckoutStepTwo(), Is.True, "Não avançou para a etapa de revisão do checkout.");
+        // Assert - Verify we've advanced to the review page
+        Assert.That(_checkoutPage.IsOnCheckoutStepTwo(), Is.True, "Did not advance to checkout review step.");
 
-        // Act - Finalizar compra
+        // Act - Complete purchase
         _checkoutPage.CompleteCheckout();
 
-        // Assert - Verificar se o checkout foi concluído com sucesso
-        Assert.That(_checkoutPage.IsOnCheckoutComplete(), Is.True, "O checkout não foi concluído com sucesso.");
+        // Assert - Verify checkout was completed successfully
+        Assert.That(_checkoutPage.IsOnCheckoutComplete(), Is.True, "Checkout was not completed successfully.");
     }
 
     [Test]
-    public void VerificarTotalDoCheckout()
+    public void VerifyCheckoutTotal()
     {
-        // Arrange - Adicionar mais um produto para aumentar o valor total
+        // Arrange - Add another product to increase total value
         _cartPage.ContinueShopping();
         _productsPage.AddProductToCart("sauce-labs-bike-light");
         _cartPage = _productsPage.GoToCart();
 
-        // Act - Iniciar checkout e preencher informações
+        // Act - Start checkout and fill information
         _checkoutPage = _cartPage.GoToCheckout();
-        _checkoutPage.FillPersonalInfo("Maria", "Souza", "54321").ClickContinue();
+        _checkoutPage.FillPersonalInfo("Mary", "Jones", "54321").ClickContinue();
 
-        // Assert - Verificar se o total está maior que zero
+        // Assert - Verify the total is greater than zero
         double totalPrice = _checkoutPage.GetTotalPrice();
-        Assert.That(totalPrice,Is.GreaterThan(0), "O preço total não foi calculado corretamente.");
+        Assert.That(totalPrice, Is.GreaterThan(0), "Total price was not calculated correctly.");
     }
 
     [Test]
-    public void CancelarCheckout()
+    public void CancelCheckout()
     {
-        // Act - Iniciar checkout e depois cancelar
+        // Act - Start checkout and then cancel
         _checkoutPage = _cartPage.GoToCheckout();
         _cartPage = _checkoutPage.ClickCancel();
 
-        // Assert - Verificar se voltou para a página do carrinho
-        Assert.That(_cartPage.IsOnCartPage(), Is.True, "Não voltou para a página do carrinho após cancelar o checkout.");
+        // Assert - Verify we returned to cart page
+        Assert.That(_cartPage.IsOnCartPage(), Is.True, "Did not return to cart page after canceling checkout.");
     }
 
     [Test]
-    public void VoltarParaProdutosAposCompra()
+    public void ReturnToProductsAfterPurchase()
     {
-        // Act - Completar o processo de checkout
+        // Act - Complete checkout process
         _checkoutPage = _cartPage.GoToCheckout();
-        _checkoutPage.FillPersonalInfo("Carlos", "Ferreira", "67890").ClickContinue();
+        _checkoutPage.FillPersonalInfo("Charles", "Miller", "67890").ClickContinue();
         _checkoutPage.CompleteCheckout();
 
-        // Act - Voltar para a página de produtos
+        // Act - Return to products page
         _productsPage = _checkoutPage.GoBackToProducts();
 
-        // Assert - Verificar se voltou para a página de produtos
-        Assert.That(_productsPage.IsOnProductsPage(), Is.True, "Não voltou para a página de produtos após concluir a compra.");
+        // Assert - Verify we returned to products page
+        Assert.That(_productsPage.IsOnProductsPage(), Is.True, "Did not return to products page after completing purchase.");
 
-        // Assert - Verificar se o carrinho está vazio
-        Assert.That(_productsPage.GetCartCount(), Is.EqualTo(0), "O carrinho não está vazio após a conclusão da compra.");
+        // Assert - Verify cart is empty
+        Assert.That(_productsPage.GetCartCount(), Is.EqualTo(0), "Cart is not empty after purchase completion.");
     }
 }

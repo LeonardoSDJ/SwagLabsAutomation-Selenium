@@ -7,44 +7,45 @@ namespace SwagLabsAutomation.Utils;
 public static class DriverFactory
 {
     private static readonly ThreadLocal<IWebDriver?> DriverInstance = new();
-    private static readonly object _lockObject = new();
+    private static readonly Lock LockObject = new();
     
     public static IWebDriver? GetDriver()
     {
         if (DriverInstance.Value != null) return DriverInstance.Value;
         
-        lock (_lockObject)
+        lock (LockObject)
         {
             try
             {
                 var options = new ChromeOptions();
-                // Configurações básicas
+                // Basic settings
                 options.AddArgument("--no-sandbox");
                 options.AddArgument("--disable-dev-shm-usage");
                 options.AddArgument("--disable-gpu");
+                options.AddArgument("start-maximized");
                 
-                // Configurações adicionais para evitar processos órfãos
+                // Additional settings to prevent orphaned processes
                 options.AddArgument("--disable-extensions");
                 options.AddArgument("--disable-infobars");
                 options.AddArgument("--disable-notifications");
                 options.AddArgument("--disable-popup-blocking");
                 options.AddArgument("--remote-debugging-port=0");
                 
-                // Serviço ChromeDriver com janela oculta
+                // ChromeDriver service with hidden window
                 var service = ChromeDriverService.CreateDefaultService();
                 service.HideCommandPromptWindow = true;
                 
-                // Inicializar driver
+                // Initialize driver
                 DriverInstance.Value = new ChromeDriver(service, options);
                 DriverInstance.Value.Manage().Window.Maximize();
                 DriverInstance.Value.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
                 
-                Console.WriteLine("ChromeDriver iniciado com sucesso");
+                Console.WriteLine("ChromeDriver started successfully");
                 return DriverInstance.Value;
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"Erro ao criar driver: {ex.Message}");
+                Console.WriteLine($"Error creating driver: {ex.Message}");
                 QuitDriver();
                 throw;
             }
@@ -57,42 +58,42 @@ public static class DriverFactory
         
         try
         {
-            Console.WriteLine("Encerrando instância do ChromeDriver");
+            Console.WriteLine("Terminating ChromeDriver instance");
             
-            // Tente fechar todas as janelas primeiro
+            // Try to close all windows first
             try 
             { 
                 DriverInstance.Value.Close(); 
             }
-            catch { /* ignorado */ }
+            catch { /* ignored */ }
             
-            // Em seguida, encerre o driver
+            // Next, quit the driver
             try 
             { 
                 DriverInstance.Value.Quit(); 
             }
-            catch { /* ignorado */ }
+            catch { /* ignored */ }
             
-            // Por fim, descarte o objeto
+            // Finally, dispose the object
             try 
             { 
                 DriverInstance.Value.Dispose(); 
             }
-            catch { /* ignorado */ }
+            catch { /* ignored */ }
             
-            // Limpe a referência
+            // Clear the reference
             DriverInstance.Value = null;
         }
         catch (Exception ex) 
         { 
-            Console.WriteLine($"Erro ao encerrar driver: {ex.Message}");
+            Console.WriteLine($"Error terminating driver: {ex.Message}");
         }
         finally
         {
-            // Garante que processos órfãos sejam encerrados
+            // Ensure orphaned processes are terminated
             KillChromeProcesses();
             
-            // Aguardar tempo suficiente para encerramento completo
+            // Wait enough time for complete termination
             Thread.Sleep(500);
         }
     }
@@ -101,9 +102,9 @@ public static class DriverFactory
     {
         try
         {
-            Console.WriteLine("Verificando processos órfãos...");
+            Console.WriteLine("Checking for orphaned processes...");
             
-            // Encerrar processos chromedriver
+            // Terminate chromedriver processes
             int chromedriverCount = 0;
             foreach (var process in Process.GetProcessesByName("chromedriver"))
             {
@@ -112,57 +113,53 @@ public static class DriverFactory
                     process.Kill(true);
                     chromedriverCount++;
                 }
-                catch { /* ignorado */ }
+                catch { /* ignored */ }
             }
             
             if (chromedriverCount > 0)
             {
-                Console.WriteLine($"Encerrados {chromedriverCount} processos chromedriver órfãos");
+                Console.WriteLine($"Terminated {chromedriverCount} orphaned chromedriver processes");
             }
             
-            // Encerrar processos Chrome relacionados à automação
-            int chromeCount = 0;
+            // Terminate Chrome processes related to automation
+            var chromeCount = 0;
             foreach (var process in Process.GetProcessesByName("chrome"))
             {
                 try 
                 {
-                    string title = process.MainWindowTitle.ToLower();
-                    if (title == "data:," || 
-                        title.Contains("chrome-automation") ||
-                        title.Contains("saucedemo") || 
-                        title.Contains("swag labs"))
-                    {
-                        process.Kill(true);
-                        chromeCount++;
-                    }
+                    var title = process.MainWindowTitle.ToLower();
+                    if (title != "data:," &&
+                        !title.Contains("chrome-automation") &&
+                        !title.Contains("saucedemo") &&
+                        !title.Contains("swag labs")) continue;
+                    process.Kill(true);
+                    chromeCount++;
                 }
-                catch { /* ignorado */ }
+                catch { /* ignored */ }
             }
             
             if (chromeCount > 0)
             {
-                Console.WriteLine($"Encerrados {chromeCount} processos Chrome órfãos");
+                Console.WriteLine($"Terminated {chromeCount} orphaned Chrome processes");
             }
             
-            // Se precisar de uma abordagem mais agressiva, pode usar taskkill
-            if (chromedriverCount > 0 || chromeCount > 0)
+            // If needed, use a more aggressive approach with taskkill
+            if (chromedriverCount <= 0 && chromeCount <= 0) return;
+            try
             {
-                try
-                {
-                    using var taskkill = new Process();
-                    taskkill.StartInfo.FileName = "taskkill";
-                    taskkill.StartInfo.Arguments = "/F /IM chromedriver.exe /T";
-                    taskkill.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                    taskkill.StartInfo.CreateNoWindow = true;
-                    taskkill.Start();
-                    taskkill.WaitForExit(2000);
-                }
-                catch { /* ignorado */ }
+                using var taskkill = new Process();
+                taskkill.StartInfo.FileName = "taskkill";
+                taskkill.StartInfo.Arguments = "/F /IM chromedriver.exe /T";
+                taskkill.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                taskkill.StartInfo.CreateNoWindow = true;
+                taskkill.Start();
+                taskkill.WaitForExit(2000);
             }
+            catch { /* ignored */ }
         }
         catch (Exception ex) 
         { 
-            Console.WriteLine($"Erro ao encerrar processos: {ex.Message}");
+            Console.WriteLine($"Error terminating processes: {ex.Message}");
         }
     }
 }

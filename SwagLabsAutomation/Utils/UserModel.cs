@@ -10,18 +10,18 @@ public enum UserType
 
 public class UserModel
 {
+    private readonly string _description;
     public string Username { get; }
     public string Password { get; }
     public UserType Type { get; }
-    public string Description { get; }
     public string[] ExpectedBehaviors { get; }
 
     private UserModel(string username, string password, UserType type, string description, string[] expectedBehaviors)
     {
+        _description = description;
         Username = username;
         Password = password;
         Type = type;
-        Description = description;
         ExpectedBehaviors = expectedBehaviors;
     }
 
@@ -29,41 +29,41 @@ public class UserModel
         "standard_user",
         "secret_sauce",
         UserType.Standard,
-        "Usuário padrão com comportamento normal",
-        new[] { "Login normal", "Navegação normal", "Checkout completo" }
+        "Standard user with normal behavior",
+        ["Normal login", "Normal navigation", "Complete checkout"]
     );
 
     public static UserModel LockedOut => new UserModel(
         "locked_out_user",
         "secret_sauce",
         UserType.LockedOut,
-        "Usuário bloqueado que não consegue fazer login",
-        new[] { "Não consegue fazer login", "Exibe mensagem de erro específica" }
+        "Locked out user who cannot login",
+        ["Cannot login", "Displays specific error message"]
     );
 
     public static UserModel Problem => new UserModel(
         "problem_user",
         "secret_sauce",
         UserType.Problem,
-        "Usuário com problemas de UI e comportamento",
-        new[] {
-            "Todas as imagens de produtos são iguais",
-            "Não consegue preencher formulários corretamente",
-            "Ordenação não funciona",
-            "Alguns links não funcionam corretamente"
-        }
+        "User with UI and behavior problems",
+        [
+            "All product images are identical",
+            "Cannot fill forms correctly",
+            "Sorting doesn't work",
+            "Some links don't work properly"
+        ]
     );
 
     public static UserModel PerformanceGlitch => new UserModel(
         "performance_glitch_user",
         "secret_sauce",
         UserType.PerformanceGlitch,
-        "Usuário com problemas de performance/lentidão",
-        new[] {
-            "Login mais lento",
-            "Navegação lenta entre páginas",
-            "Checkout funciona, mas é lento"
-        }
+        "User with performance/slowness issues",
+        [
+            "Slower login",
+            "Slow navigation between pages",
+            "Checkout works, but is slow"
+        ]
     );
 
     public override string ToString()

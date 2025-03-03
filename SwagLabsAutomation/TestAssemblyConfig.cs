@@ -1,5 +1,4 @@
-﻿using NUnit.Framework;
-using SwagLabsAutomation.Utils;
+﻿using SwagLabsAutomation.Utils;
 
 namespace SwagLabsAutomation;
 
@@ -9,14 +8,14 @@ public class TestAssemblyConfig
     [OneTimeSetUp]
     public void SetupExtentReports()
     {
-        Console.WriteLine("OneTimeSetUp - Inicializando ExtentReports");
+        Console.WriteLine("OneTimeSetUp - Initializing ExtentReports");
         ExtentReportManager.GetInstance();
     }
 
     [OneTimeTearDown]
     public void TearDownExtentReports()
     {
-        Console.WriteLine("OneTimeTearDown - Finalizando ExtentReports");
+        Console.WriteLine("OneTimeTearDown - Finalizing ExtentReports");
         ExtentReportManager.EndReport();
     }
 }

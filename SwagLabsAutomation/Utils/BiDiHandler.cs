@@ -10,12 +10,12 @@ using static System.Int64;
 namespace SwagLabsAutomation.Utils;
 
 /// <summary>
-/// Manipulador de funcionalidades BiDi (Bidirecional) do Selenium WebDriver.
-/// Fornece acesso a recursos como monitoramento de rede, console e JavaScript.
+/// Handler for BiDi (Bidirectional) functionality of Selenium WebDriver.
+/// Provides access to features like network monitoring, console, and JavaScript.
 /// </summary>
 public class BiDiHandler : IDisposable
 {
-    #region Propriedades e campos
+    #region Properties and fields
 
     private readonly IWebDriver? _driver;
     private readonly ExtentTest? _test;
@@ -24,29 +24,29 @@ public class BiDiHandler : IDisposable
     private bool _isConsoleMonitoringEnabled;
     private bool _isPerformanceMonitoringEnabled;
     
-    // Coleções para armazenar dados de monitoramento
+    // Collections for storing monitoring data
     private readonly ConcurrentBag<NetworkRequest> _networkRequests = new();
     private readonly ConcurrentBag<ConsoleMessage> _consoleMessages = new();
     private readonly ConcurrentBag<PerformanceMetric> _performanceMetrics = new();
 
-    // Informações de reflexão para versão do DevTools
+    // Reflection information for DevTools version
     private Type? _networkAdapterType;
     private Type? _consoleAdapterType;
     private Type? _performanceAdapterType;
     private Type? _runtimeAdapterType;
 
-    // Timer para coleta periódica de métricas
+    // Timer for periodic metrics collection
     private Timer? _metricsTimer;
 
     #endregion
 
-    #region Construtor e inicialização
+    #region Constructor and initialization
 
     /// <summary>
-    /// Construtor para o BiDiHandler
+    /// Constructor for BiDiHandler
     /// </summary>
-    /// <param name="driver">WebDriver atual</param>
-    /// <param name="test">ExtentTest para log (opcional)</param>
+    /// <param name="driver">Current WebDriver</param>
+    /// <param name="test">ExtentTest for logging (optional)</param>
     public BiDiHandler(IWebDriver? driver, ExtentTest? test = null)
     {
         _driver = driver;
@@ -56,31 +56,31 @@ public class BiDiHandler : IDisposable
     }
 
     /// <summary>
-    /// Inicializa a sessão DevTools se possível
+    /// Initializes the DevTools session if possible
     /// </summary>
     private void InitializeDevToolsSession()
     {
         if (_driver is not IDevTools devToolsDriver)
         {
-            LogWarning("O driver fornecido não suporta DevTools");
+            LogWarning("The provided driver does not support DevTools");
             return;
         }
 
         try
         {
             _session = devToolsDriver.GetDevToolsSession();
-            LogInfo("Sessão DevTools inicializada com sucesso");
+            LogInfo("DevTools session initialized successfully");
             
             DetectDevToolsVersions();
         }
         catch (Exception ex)
         {
-            LogWarning($"Não foi possível inicializar a sessão DevTools: {ex.Message}");
+            LogWarning($"Could not initialize DevTools session: {ex.Message}");
         }
     }
     
     /// <summary>
-    /// Detecta as versões disponíveis do DevTools via reflexão
+    /// Detects available DevTools versions via reflection
     /// </summary>
     private void DetectDevToolsVersions()
     {
@@ -91,26 +91,26 @@ public class BiDiHandler : IDisposable
             
             if (devToolsVersions.Count == 0)
             {
-                LogWarning("Nenhuma versão do DevTools encontrada");
+                LogWarning("No DevTools versions found");
                 return;
             }
             
-            // Obter versão mais recente
+            // Get latest version
             string latestVersion = devToolsVersions[0];
-            LogInfo($"Versões do DevTools encontradas: {string.Join(", ", devToolsVersions)}");
-            LogInfo($"Usando versão: {latestVersion}");
+            LogInfo($"DevTools versions found: {string.Join(", ", devToolsVersions)}");
+            LogInfo($"Using version: {latestVersion}");
             
-            // Inicializar tipos de adaptadores
+            // Initialize adapter types
             InitializeAdapterTypes(seleniumAssembly, latestVersion);
         }
         catch (Exception ex)
         {
-            LogError($"Erro ao detectar versões do DevTools: {ex.Message}");
+            LogError($"Error detecting DevTools versions: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Obtém as versões disponíveis do DevTools em ordem decrescente
+    /// Gets available DevTools versions in descending order
     /// </summary>
     private static List<string> GetDevToolsVersions(Assembly seleniumAssembly)
     {
@@ -128,7 +128,7 @@ public class BiDiHandler : IDisposable
             }
         }
         
-        // Ordenar versões em ordem decrescente
+        // Sort versions in descending order
         devToolsVersions.Sort((a, b) => 
         {
             if (int.TryParse(a.AsSpan(1), out var versionA) && 
@@ -143,7 +143,7 @@ public class BiDiHandler : IDisposable
     }
 
     /// <summary>
-    /// Inicializa os tipos de adaptadores para a versão específica do DevTools
+    /// Initializes adapter types for the specific DevTools version
     /// </summary>
     private void InitializeAdapterTypes(Assembly seleniumAssembly, string version)
     {
@@ -157,48 +157,50 @@ public class BiDiHandler : IDisposable
     
         if (allTypesFound)
         {
-            LogInfo($"Todos os adaptadores encontrados para versão {version}");
+            LogInfo($"All adapters found for version {version}");
             FindNetworkInterface(seleniumAssembly, version);
         }
         else
         {
-            LogWarning($"Alguns adaptadores não foram encontrados para versão {version}");
+            LogWarning($"Some adapters were not found for version {version}");
         }
     }
 
     #endregion
 
-    #region Monitoramento de Rede
+    #region Network Monitoring
 
     /// <summary>
-    /// Inicia o monitoramento de requisições de rede
+    /// Starts monitoring network requests
     /// </summary>
     public void EnableNetworkMonitoring()
     {
         if (_session == null || _networkAdapterType == null)
         {
-            LogWarning("Sessão DevTools ou adaptador de rede não disponível");
+            LogWarning("DevTools session or network adapter not available");
             return;
         }
 
         try
         {
             _networkRequests.Clear();
-    // Aqui está a correção: use a interface INetwork
-    var network = GetVersionSpecificDomain<object>(_session, _networkAdapterType);    if (network == null) return;
-            // Habilitar o domínio Network
+            // Here's the fix: use INetwork interface
+            var network = GetVersionSpecificDomain<object>(_session, _networkAdapterType);
+            if (network == null) return;
+            
+            // Enable Network domain
             EnableNetworkDomain(network);
         
-            // Registrar eventos
+            // Register events
             if (RegisterNetworkEvents(network))
             {
                 _isNetworkMonitoringEnabled = true;
-                LogInfo("Monitoramento de rede ativado com sucesso");
+                LogInfo("Network monitoring enabled successfully");
             }
         }
         catch (Exception ex)
         {
-            LogError($"Erro ao ativar monitoramento de rede: {ex.Message}");
+            LogError($"Error enabling network monitoring: {ex.Message}");
         }
     }
     
@@ -210,18 +212,18 @@ public class BiDiHandler : IDisposable
         {
             if (type.Namespace == null || !type.Namespace.StartsWith(networkNamespace) || !type.IsInterface ||
                 !type.Name.StartsWith("I")) continue;
-            LogInfo($"Interface de rede encontrada: {type.FullName}");
+            LogInfo($"Network interface found: {type.FullName}");
             var interfaceType = type.FullName;
             if (interfaceType == null) continue;
             var genericDomain = GetVersionSpecificDomain<object>(_session, Type.GetType(interfaceType)!);
             if (genericDomain == null) continue;
-            LogInfo($"Domínio de rede inicializado usando {interfaceType}");
+            LogInfo($"Network domain initialized using {interfaceType}");
             EnableNetworkDomain(genericDomain);
         }
     }
 
     /// <summary>
-    /// Habilita o domínio Network do DevTools
+    /// Enables the Network domain in DevTools
     /// </summary>
     private void EnableNetworkDomain(object network)
     {
@@ -231,7 +233,7 @@ public class BiDiHandler : IDisposable
         
         if (enableMethod == null || enableSettingsType == null)
         {
-            LogWarning("Métodos ou tipos necessários para monitoramento de rede não encontrados");
+            LogWarning("Methods or types required for network monitoring not found");
             return;
         }
         
@@ -240,7 +242,7 @@ public class BiDiHandler : IDisposable
     }
 
     /// <summary>
-    /// Registra eventos para monitoramento de rede
+    /// Registers events for network monitoring
     /// </summary>
     private bool RegisterNetworkEvents(object network)
     {
@@ -252,22 +254,22 @@ public class BiDiHandler : IDisposable
             
             if (requestWillBeSentEventInfo == null || responseReceivedEventInfo == null || loadingFailedEventInfo == null)
             {
-                LogWarning("Um ou mais eventos de rede não foram encontrados");
+                LogWarning("One or more network events not found");
                 return false;
             }
             
-            // Obter tipos de argumentos para os eventos
+            // Get argument types for events
             var requestWillBeSentArgsType = requestWillBeSentEventInfo.EventHandlerType?.GetMethod("Invoke")?.GetParameters()[1].ParameterType;
             var responseReceivedArgsType = responseReceivedEventInfo.EventHandlerType?.GetMethod("Invoke")?.GetParameters()[1].ParameterType;
             var loadingFailedArgsType = loadingFailedEventInfo.EventHandlerType?.GetMethod("Invoke")?.GetParameters()[1].ParameterType;
             
             if (requestWillBeSentArgsType == null || responseReceivedArgsType == null || loadingFailedArgsType == null)
             {
-                LogWarning("Não foi possível determinar os tipos de argumentos dos eventos");
+                LogWarning("Could not determine event argument types");
                 return false;
             }
             
-            // Criar e registrar handlers para eventos
+            // Create and register handlers for events
             var requestWillBeSentHandler = CreateEventHandler(requestWillBeSentEventInfo.EventHandlerType!, requestWillBeSentArgsType, 
                 (sender, args) => HandleRequestWillBeSent(args));
                 
@@ -281,24 +283,24 @@ public class BiDiHandler : IDisposable
             responseReceivedEventInfo.AddEventHandler(network, responseReceivedHandler);
             loadingFailedEventInfo.AddEventHandler(network, loadingFailedHandler);
             
-            LogInfo("Eventos de rede registrados com sucesso");
+            LogInfo("Network events registered successfully");
             return true;
         }
         catch (Exception ex)
         {
-            LogError($"Erro ao registrar eventos de rede: {ex.Message}");
+            LogError($"Error registering network events: {ex.Message}");
             return false;
         }
     }
 
     /// <summary>
-    /// Manipula evento RequestWillBeSent do DevTools
+    /// Handles RequestWillBeSent event from DevTools
     /// </summary>
     private void HandleRequestWillBeSent(object? args)
     {
         try
         {
-            // Extrair dados do evento via reflexão
+            // Extract data from event via reflection
             var requestProperty = args?.GetType().GetProperty("Request");
             var requestIdProperty = args?.GetType().GetProperty("RequestId");
             var typeProperty = args?.GetType().GetProperty("Type");
@@ -326,16 +328,16 @@ public class BiDiHandler : IDisposable
             };
         
             _networkRequests.Add(networkRequest);
-            LogInfo($"Requisição capturada: {method} {url}");
+            LogInfo($"Request captured: {method} {url}");
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao processar RequestWillBeSent: {ex.Message}");
+            LogWarning($"Error processing RequestWillBeSent: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Manipula evento ResponseReceived do DevTools
+    /// Handles ResponseReceived event from DevTools
     /// </summary>
     private void HandleResponseReceived(object? args)
     {
@@ -371,16 +373,16 @@ public class BiDiHandler : IDisposable
             request.ResponseTime = DateTime.Now;
             request.MimeType = mimeType;
             
-            LogInfo($"Resposta recebida: {request.Method} {request.Url} - Status: {status}");
+            LogInfo($"Response received: {request.Method} {request.Url} - Status: {status}");
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao processar ResponseReceived: {ex.Message}");
+            LogWarning($"Error processing ResponseReceived: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Manipula evento LoadingFailed do DevTools
+    /// Handles LoadingFailed event from DevTools
     /// </summary>
     private void HandleLoadingFailed(object? args)
     {
@@ -403,16 +405,16 @@ public class BiDiHandler : IDisposable
             request.StatusText = errorText;
             request.ResponseTime = DateTime.Now;
             
-            LogWarning($"Falha no carregamento: {request.Method} {request.Url} - Erro: {errorText}");
+            LogWarning($"Loading failed: {request.Method} {request.Url} - Error: {errorText}");
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao processar LoadingFailed: {ex.Message}");
+            LogWarning($"Error processing LoadingFailed: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Desativa o monitoramento de rede
+    /// Disables network monitoring
     /// </summary>
     public void DisableNetworkMonitoring()
     {
@@ -428,26 +430,26 @@ public class BiDiHandler : IDisposable
             
             disableMethod.Invoke(network, null);
             _isNetworkMonitoringEnabled = false;
-            LogInfo("Monitoramento de rede desativado com sucesso");
+            LogInfo("Network monitoring disabled successfully");
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao desativar monitoramento de rede: {ex.Message}");
+            LogWarning($"Error disabling network monitoring: {ex.Message}");
         }
     }
 
     #endregion
 
-    #region Monitoramento de Console
+    #region Console Monitoring
 
     /// <summary>
-    /// Inicia o monitoramento do console do navegador
+    /// Starts monitoring the browser console
     /// </summary>
     public void EnableConsoleMonitoring()
     {
         if (_session == null || _consoleAdapterType == null)
         {
-            LogWarning("Sessão DevTools ou adaptador de console não disponível");
+            LogWarning("DevTools session or console adapter not available");
             return;
         }
 
@@ -458,29 +460,29 @@ public class BiDiHandler : IDisposable
             var console = GetVersionSpecificDomain<object>(_session, _consoleAdapterType);
             if (console == null) return;
             
-            // Habilitar o domínio Console
+            // Enable Console domain
             var enableMethod = _consoleAdapterType.GetMethod("Enable");
             if (enableMethod == null)
             {
-                LogWarning("Método Enable não encontrado para console");
+                LogWarning("Enable method not found for console");
                 return;
             }
             
             enableMethod.Invoke(console, null);
             
-            // Registrar evento MessageAdded
+            // Register MessageAdded event
             if (!RegisterConsoleEvents(console)) return;
             _isConsoleMonitoringEnabled = true;
-            LogInfo("Monitoramento de console ativado com sucesso");
+            LogInfo("Console monitoring enabled successfully");
         }
         catch (Exception ex)
         {
-            LogError($"Erro ao ativar monitoramento de console: {ex.Message}");
+            LogError($"Error enabling console monitoring: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Registra eventos para monitoramento de console
+    /// Registers events for console monitoring
     /// </summary>
     private bool RegisterConsoleEvents(object console)
     {
@@ -489,14 +491,14 @@ public class BiDiHandler : IDisposable
             var messageAddedEvent = _consoleAdapterType!.GetEvent("MessageAdded");
             if (messageAddedEvent == null)
             {
-                LogWarning("Evento MessageAdded não encontrado");
+                LogWarning("MessageAdded event not found");
                 return false;
             }
             
             var messageAddedArgsType = messageAddedEvent.EventHandlerType?.GetMethod("Invoke")?.GetParameters()[1].ParameterType;
             if (messageAddedArgsType == null)
             {
-                LogWarning("Tipo de argumento para evento MessageAdded não encontrado");
+                LogWarning("Argument type for MessageAdded event not found");
                 return false;
             }
             
@@ -508,13 +510,13 @@ public class BiDiHandler : IDisposable
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao registrar eventos de console: {ex.Message}");
+            LogWarning($"Error registering console events: {ex.Message}");
             return false;
         }
     }
 
     /// <summary>
-    /// Manipula evento MessageAdded do console do DevTools
+    /// Handles MessageAdded event from console in DevTools
     /// </summary>
     private void HandleConsoleMessageAdded(object? args)
     {
@@ -560,7 +562,7 @@ public class BiDiHandler : IDisposable
             
             _consoleMessages.Add(consoleMessage);
             
-            // Log de acordo com o nível
+            // Log according to level
             switch (level.ToLower())
             {
                 case "error":
@@ -576,12 +578,12 @@ public class BiDiHandler : IDisposable
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao processar mensagem de console: {ex.Message}");
+            LogWarning($"Error processing console message: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Desativa o monitoramento do console
+    /// Disables console monitoring
     /// </summary>
     public void DisableConsoleMonitoring()
     {
@@ -597,26 +599,26 @@ public class BiDiHandler : IDisposable
             
             disableMethod.Invoke(console, null);
             _isConsoleMonitoringEnabled = false;
-            LogInfo("Monitoramento de console desativado com sucesso");
+            LogInfo("Console monitoring disabled successfully");
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao desativar monitoramento de console: {ex.Message}");
+            LogWarning($"Error disabling console monitoring: {ex.Message}");
         }
     }
 
     #endregion
 
-    #region Monitoramento de Performance
+    #region Performance Monitoring
 
     /// <summary>
-    /// Inicia o monitoramento de métricas de performance
+    /// Starts monitoring performance metrics
     /// </summary>
     public void EnablePerformanceMonitoring()
     {
         if (_session == null || _performanceAdapterType == null)
         {
-            LogWarning("Sessão DevTools ou adaptador de performance não disponível");
+            LogWarning("DevTools session or performance adapter not available");
             return;
         }
 
@@ -627,34 +629,34 @@ public class BiDiHandler : IDisposable
             var performance = GetVersionSpecificDomain<object>(_session, _performanceAdapterType);
             if (performance == null) return;
             
-            // Habilitar o domínio Performance
+            // Enable Performance domain
             var enableMethod = _performanceAdapterType.GetMethod("Enable");
             if (enableMethod == null)
             {
-                LogWarning("Método Enable não encontrado para performance");
+                LogWarning("Enable method not found for performance");
                 return;
             }
             
             enableMethod.Invoke(performance, null);
             
-            // Configurar domínio de tempo
+            // Configure time domain
             ConfigurePerformanceTimeDomain(performance);
             
-            // Registrar eventos
+            // Register events
             if (RegisterPerformanceEvents(performance))
             {
                 _isPerformanceMonitoringEnabled = true;
-                LogInfo("Monitoramento de performance ativado com sucesso");
+                LogInfo("Performance monitoring enabled successfully");
             }
         }
         catch (Exception ex)
         {
-            LogError($"Erro ao ativar monitoramento de performance: {ex.Message}");
+            LogError($"Error enabling performance monitoring: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Configura o domínio de tempo para métricas de performance
+    /// Configures the time domain for performance metrics
     /// </summary>
     private void ConfigurePerformanceTimeDomain(object performance)
     {
@@ -676,7 +678,7 @@ public class BiDiHandler : IDisposable
     }
 
     /// <summary>
-    /// Registra eventos para monitoramento de performance
+    /// Registers events for performance monitoring
     /// </summary>
     private bool RegisterPerformanceEvents(object performance)
     {
@@ -685,14 +687,14 @@ public class BiDiHandler : IDisposable
             var metricsReceivedEvent = _performanceAdapterType!.GetEvent("MetricsReceived");
             if (metricsReceivedEvent == null)
             {
-                LogWarning("Evento MetricsReceived não encontrado");
+                LogWarning("MetricsReceived event not found");
                 return false;
             }
             
             var metricsReceivedArgsType = metricsReceivedEvent.EventHandlerType?.GetMethod("Invoke")?.GetParameters()[1].ParameterType;
             if (metricsReceivedArgsType == null)
             {
-                LogWarning("Tipo de argumento para evento MetricsReceived não encontrado");
+                LogWarning("Argument type for MetricsReceived event not found");
                 return false;
             }
             
@@ -701,27 +703,27 @@ public class BiDiHandler : IDisposable
             
             metricsReceivedEvent.AddEventHandler(performance, metricsReceivedHandler);
             
-            // Iniciar coleta periódica de métricas
+            // Start periodic metrics collection
             StartPeriodicMetricsCollection(performance);
             
             return true;
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao registrar eventos de performance: {ex.Message}");
+            LogWarning($"Error registering performance events: {ex.Message}");
             return false;
         }
     }
 
     /// <summary>
-    /// Inicia a coleta periódica de métricas
+    /// Starts periodic collection of metrics
     /// </summary>
     private void StartPeriodicMetricsCollection(object performance)
     {
         var getMetricsMethod = _performanceAdapterType!.GetMethod("GetMetrics");
         if (getMetricsMethod == null) return;
         
-        // Criar timer para coletar métricas a cada 2 segundos
+        // Create timer to collect metrics every 2 seconds
         _metricsTimer = new Timer(_ =>
         {
             try
@@ -730,13 +732,13 @@ public class BiDiHandler : IDisposable
             }
             catch (Exception ex)
             {
-                LogWarning($"Erro ao coletar métricas: {ex.Message}");
+                LogWarning($"Error collecting metrics: {ex.Message}");
             }
         }, null, 0, 2000);
     }
 
     /// <summary>
-    /// Manipula evento MetricsReceived de performance do DevTools
+    /// Handles MetricsReceived event from performance in DevTools
     /// </summary>
     private void HandleMetricsReceived(object? args)
     {
@@ -768,17 +770,17 @@ public class BiDiHandler : IDisposable
                 };
                 
                 _performanceMetrics.Add(performanceMetric);
-                LogInfo($"Métrica: {name} = {value}");
+                LogInfo($"Metric: {name} = {value}");
             }
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao processar métricas: {ex.Message}");
+            LogWarning($"Error processing metrics: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Desativa o monitoramento de performance
+    /// Disables performance monitoring
     /// </summary>
     public void DisablePerformanceMonitoring()
     {
@@ -786,7 +788,7 @@ public class BiDiHandler : IDisposable
         
         try
         {
-            // Parar o timer
+            // Stop timer
             _metricsTimer?.Dispose();
             _metricsTimer = null;
             
@@ -798,20 +800,20 @@ public class BiDiHandler : IDisposable
             
             disableMethod.Invoke(performance, null);
             _isPerformanceMonitoringEnabled = false;
-            LogInfo("Monitoramento de performance desativado com sucesso");
+            LogInfo("Performance monitoring disabled successfully");
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao desativar monitoramento de performance: {ex.Message}");
+            LogWarning($"Error disabling performance monitoring: {ex.Message}");
         }
     }
 
     #endregion
 
-    #region Utilitários e métodos auxiliares
+    #region Utilities and helper methods
 
     /// <summary>
-    /// Obtém um domínio específico da versão do DevTools
+    /// Gets a specific domain version from DevTools
     /// </summary>
     private T? GetVersionSpecificDomain<T>(DevToolsSession? session, Type adapterType)
     {
@@ -822,34 +824,34 @@ public class BiDiHandler : IDisposable
                 ?.MakeGenericMethod(adapterType);
 
             if (getVersionSpecificDomains != null) return (T?)getVersionSpecificDomains.Invoke(session, null);
-            LogWarning($"Método GetVersionSpecificDomains não encontrado para {adapterType.Name}");
+            LogWarning($"GetVersionSpecificDomains method not found for {adapterType.Name}");
             return default;
 
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao obter domínio específico da versão: {ex.Message}");
+            LogWarning($"Error getting specific version domain: {ex.Message}");
             return default;
         }
     }
 
     /// <summary>
-    /// Cria um handler de evento tipado usando reflexão
+    /// Creates a typed event handler using reflection
     /// </summary>
     private Delegate CreateEventHandler(Type eventHandlerType, Type eventArgsType, Action<object, object?> handler)
     {
         try
         {
-            // Usar método de ajuda tipado para criar o delegate
+            // Use typed helper method to create the delegate
             var dynamicHandlerMethod = GetType().GetMethod("DynamicEventHandler", 
                 BindingFlags.NonPublic | BindingFlags.Instance)
                 ?.MakeGenericMethod(eventArgsType);
 
             if (dynamicHandlerMethod != null)
                 return Delegate.CreateDelegate(eventHandlerType, this, dynamicHandlerMethod);
-            LogWarning("Método DynamicEventHandler não encontrado");
+            LogWarning("DynamicEventHandler method not found");
                 
-            // Fallback: usar method info direto para criar o delegate
+            // Fallback: use method info directly to create the delegate
             return Delegate.CreateDelegate(eventHandlerType, this, 
                 GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.Instance)
                     .First(m => m.Name.Contains("DynamicEventHandler")));
@@ -857,13 +859,13 @@ public class BiDiHandler : IDisposable
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao criar handler de evento: {ex.Message}");
+            LogWarning($"Error creating event handler: {ex.Message}");
             throw;
         }
     }
 
     /// <summary>
-    /// Método dinâmico para processar eventos de diferentes tipos
+    /// Dynamic method to process events of different types
     /// </summary>
     private void DynamicEventHandler<T>(object sender, T? args)
     {
@@ -884,55 +886,55 @@ public class BiDiHandler : IDisposable
     }
 
     /// <summary>
-    /// Desativa todos os monitoramentos ativos
+    /// Disables all active monitoring
     /// </summary>
     public void DisableAllMonitoring()
     {
         DisableNetworkMonitoring();
         DisableConsoleMonitoring();
         DisablePerformanceMonitoring();
-        LogInfo("Todos os monitoramentos foram desativados");
+        LogInfo("All monitoring disabled");
     }
 
     /// <summary>
-    /// Captura screenshots de erros encontrados durante o monitoramento
+    /// Captures screenshots of errors found during monitoring
     /// </summary>
     public void CaptureErrorScreenshots(string testName)
     {
-        // Verificar se existem erros de console
+        // Check for console errors
         var errors = _consoleMessages.Where(m => m.Level.ToLower() == "error").ToList();
     
         if (errors.Count > 0)
         {
-            LogWarning($"Encontrados {errors.Count} erros de JavaScript/console");
+            LogWarning($"Found {errors.Count} JavaScript/console errors");
             CaptureScreenshot($"{testName}_JSError");
         
-            // Registrar detalhes dos erros
+            // Log error details
             foreach (var error in errors)
             {
-                LogError($"Erro JS: {error.Text} - {error.Url}:{error.LineNumber}");
+                LogError($"JS Error: {error.Text} - {error.Url}:{error.LineNumber}");
             }
         }
     
-        // Verificar se existem falhas de rede
+        // Check for network failures
         var failedRequests = _networkRequests.Where(r => r.Status == "Failed" || 
                                                         (int.TryParse(r.Status, out int statusCode) && statusCode >= 400)).ToList();
     
         if (failedRequests.Count > 0)
         {
-            LogWarning($"Encontrados {failedRequests.Count} erros de rede");
+            LogWarning($"Found {failedRequests.Count} network errors");
             CaptureScreenshot($"{testName}_NetworkError");
         
-            // Registrar detalhes das falhas
+            // Log failure details
             foreach (var request in failedRequests)
             {
-                LogError($"Erro Rede: {request.Method} {request.Url} - Status: {request.Status} {request.StatusText}");
+                LogError($"Network Error: {request.Method} {request.Url} - Status: {request.Status} {request.StatusText}");
             }
         }
     }
 
     /// <summary>
-    /// Adiciona informações de monitoramento ao relatório de testes
+    /// Adds monitoring information to the test report
     /// </summary>
     public void AddInfoToReport()
     {
@@ -940,23 +942,23 @@ public class BiDiHandler : IDisposable
         
         try
         {
-            // Adicionar métricas de performance
+            // Add performance metrics
             AddPerformanceMetricsToReport();
             
-            // Adicionar resumo de requisições de rede
+            // Add network request summary
             AddNetworkRequestsToReport();
             
-            // Adicionar mensagens de console
+            // Add console messages
             AddConsoleMessagesToReport();
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao adicionar informações ao relatório: {ex.Message}");
+            LogWarning($"Error adding information to report: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Adiciona métricas de performance ao relatório
+    /// Adds performance metrics to the report
     /// </summary>
     private void AddPerformanceMetricsToReport()
     {
@@ -974,7 +976,7 @@ public class BiDiHandler : IDisposable
             })
             .ToList();
         
-        var metricsTable = metrics.Aggregate("<table border='1'><tr><th>Métrica</th><th>Valor</th><th>Min</th><th>Max</th></tr>", 
+        var metricsTable = metrics.Aggregate("<table border='1'><tr><th>Metric</th><th>Value</th><th>Min</th><th>Max</th></tr>", 
             (current, metric) => current + $"<tr><td>{metric.Name}</td><td>{metric.LastValue}</td><td>{metric.Min}</td><td>{metric.Max}</td></tr>");
         metricsTable += "</table>";
         
@@ -982,7 +984,7 @@ public class BiDiHandler : IDisposable
     }
 
     /// <summary>
-    /// Adiciona resumo de requisições de rede ao relatório
+    /// Adds network request summary to the report
     /// </summary>
     private void AddNetworkRequestsToReport()
     {
@@ -994,10 +996,10 @@ public class BiDiHandler : IDisposable
             (int.TryParse(r.Status, out int status) && status >= 400));
         var pendingRequests = totalRequests - successRequests - failedRequests;
         
-        _test.Info($"<div>Requisições: {totalRequests} total | {successRequests} sucesso | " +
-                   $"{failedRequests} falhas | {pendingRequests} pendentes</div>");
+        _test.Info($"<div>Requests: {totalRequests} total | {successRequests} success | " +
+                   $"{failedRequests} failures | {pendingRequests} pending</div>");
         
-        // Detalhar falhas se houver
+        // Detail failures if any
         if (failedRequests <= 0) return;
         {
             var failedRequestsList = _networkRequests
@@ -1006,7 +1008,7 @@ public class BiDiHandler : IDisposable
                 .OrderByDescending(r => r.Timestamp)
                 .ToList();
             
-            var failuresTable = failedRequestsList.Aggregate("<table border='1'><tr><th>URL</th><th>Status</th><th>Erro</th></tr>", 
+            var failuresTable = failedRequestsList.Aggregate("<table border='1'><tr><th>URL</th><th>Status</th><th>Error</th></tr>", 
                 (current, request) => current + $"<tr><td>{request.Url}</td><td>{request.Status}</td><td>{request.StatusText}</td></tr>");
             failuresTable += "</table>";
             
@@ -1015,7 +1017,7 @@ public class BiDiHandler : IDisposable
     }
 
     /// <summary>
-    /// Adiciona mensagens de console ao relatório
+    /// Adds console messages to the report
     /// </summary>
     private void AddConsoleMessagesToReport()
     {
@@ -1024,9 +1026,9 @@ public class BiDiHandler : IDisposable
         var errorCount = _consoleMessages.Count(m => m.Level.ToLower() == "error");
         var warningCount = _consoleMessages.Count(m => m.Level.ToLower() == "warning");
         
-        _test.Info($"<div>Console: {_consoleMessages.Count} mensagens | {errorCount} erros | {warningCount} avisos</div>");
+        _test.Info($"<div>Console: {_consoleMessages.Count} messages | {errorCount} errors | {warningCount} warnings</div>");
         
-        // Detalhar erros se houver
+        // Detail errors if any
         if (errorCount <= 0) return;
         {
             var errorMessages = _consoleMessages
@@ -1034,7 +1036,7 @@ public class BiDiHandler : IDisposable
                 .OrderByDescending(m => m.Timestamp)
                 .ToList();
             
-            var errorsTable = errorMessages.Aggregate("<table border='1'><tr><th>Mensagem</th><th>URL</th><th>Linha</th></tr>", 
+            var errorsTable = errorMessages.Aggregate("<table border='1'><tr><th>Message</th><th>URL</th><th>Line</th></tr>", 
                 (current, message) => current + $"<tr><td>{message.Text}</td><td>{message.Url}</td><td>{message.LineNumber}</td></tr>");
             errorsTable += "</table>";
             
@@ -1043,7 +1045,7 @@ public class BiDiHandler : IDisposable
     }
 
     /// <summary>
-    /// Ativa uma implementação simplificada quando o DevTools não está disponível
+    /// Activates a simplified implementation when DevTools is not available
     /// </summary>
     public void UseSimpleImplementation()
     {
@@ -1051,7 +1053,7 @@ public class BiDiHandler : IDisposable
         
         try
         {
-            // Implementar captura de erros de JavaScript usando o executor JavaScript padrão
+            // Implement JavaScript error capture using standard JavaScript executor
             ((IJavaScriptExecutor)_driver).ExecuteScript(
                 "window.addEventListener('error', function(e) { " +
                 "  if (!window.__seleniumErrors) window.__seleniumErrors = []; " +
@@ -1064,16 +1066,16 @@ public class BiDiHandler : IDisposable
                 "});"
             );
             
-            LogInfo("Implementação simplificada de monitoramento ativada");
+            LogInfo("Simplified monitoring implementation activated");
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao configurar implementação simplificada: {ex.Message}");
+            LogWarning($"Error configuring simplified implementation: {ex.Message}");
         }
     }
     
     /// <summary>
-    /// Coleta erros de JavaScript usando a implementação simplificada
+    /// Collects JavaScript errors using the simplified implementation
     /// </summary>
     public List<ConsoleMessage> CollectJavaScriptErrors()
     {
@@ -1100,14 +1102,14 @@ public class BiDiHandler : IDisposable
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao coletar erros de JavaScript: {ex.Message}");
+            LogWarning($"Error collecting JavaScript errors: {ex.Message}");
         }
         
         return errors;
     }
 
     /// <summary>
-    /// Função para testar a conectividade com o DevTools
+    /// Function to test connectivity with DevTools
     /// </summary>
     public bool TestDevToolsConnectivity()
     {
@@ -1116,18 +1118,18 @@ public class BiDiHandler : IDisposable
         try
         {
             using var session = tools.GetDevToolsSession();
-            LogInfo("Conectividade com DevTools testada com sucesso");
+            LogInfo("DevTools connectivity tested successfully");
             return true;
         }
         catch (Exception ex)
         {
-            LogWarning($"Falha ao conectar com DevTools: {ex.Message}");
+            LogWarning($"Failed to connect to DevTools: {ex.Message}");
             return false;
         }
     }
     
     /// <summary>
-    /// Captura screenshot em caso de erro
+    /// Captures screenshot in case of error
     /// </summary>
     public string CaptureScreenshot(string prefix)
     {
@@ -1149,7 +1151,7 @@ public class BiDiHandler : IDisposable
             );
             
             screenshot.SaveAsFile(screenshotPath);
-            LogInfo($"Screenshot salvo em: {screenshotPath}");
+            LogInfo($"Screenshot saved at: {screenshotPath}");
             
             _test?.AddScreenCaptureFromPath(screenshotPath);
             
@@ -1157,13 +1159,13 @@ public class BiDiHandler : IDisposable
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao capturar screenshot: {ex.Message}");
+            LogWarning($"Error capturing screenshot: {ex.Message}");
             return string.Empty;
         }
     }
 
     /// <summary>
-    /// Libera recursos
+    /// Releases resources
     /// </summary>
     public void Dispose()
     {
@@ -1175,16 +1177,16 @@ public class BiDiHandler : IDisposable
         }
         catch (Exception ex)
         {
-            LogWarning($"Erro ao liberar recursos: {ex.Message}");
+            LogWarning($"Error releasing resources: {ex.Message}");
         }
     }
 
     #endregion
 
-    #region Classes auxiliares para armazenamento de dados
+    #region Helper classes for data storage
 
     /// <summary>
-    /// Representa uma requisição de rede capturada
+    /// Represents a captured network request
     /// </summary>
     public class NetworkRequest
     {
@@ -1200,7 +1202,7 @@ public class BiDiHandler : IDisposable
     }
 
     /// <summary>
-    /// Representa uma mensagem de console capturada
+    /// Represents a captured console message
     /// </summary>
     public class ConsoleMessage
     {
@@ -1212,9 +1214,9 @@ public class BiDiHandler : IDisposable
     }
 
     /// <summary>
-    /// Representa uma métrica de performance capturada
+    /// Represents a captured performance metric
     /// </summary>
-    public class PerformanceMetric
+    private class PerformanceMetric
     {
         public string Name { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
@@ -1223,7 +1225,7 @@ public class BiDiHandler : IDisposable
 
     #endregion
 
-    #region Métodos de logging
+    #region Logging methods
 
     private void LogInfo(string message)
     {
@@ -1233,13 +1235,13 @@ public class BiDiHandler : IDisposable
 
     private void LogWarning(string message)
     {
-        Console.WriteLine($"[BiDiHandler] AVISO: {message}");
+        Console.WriteLine($"[BiDiHandler] WARNING: {message}");
         _test?.Warning($"[BiDi] {message}");
     }
 
     private void LogError(string message)
     {
-        Console.WriteLine($"[BiDiHandler] ERRO: {message}");
+        Console.WriteLine($"[BiDiHandler] ERROR: {message}");
         _test?.Error($"[BiDi] {message}");
     }
 

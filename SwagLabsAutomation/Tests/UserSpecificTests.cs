@@ -5,236 +5,204 @@ using SwagLabsAutomation.Utils;
 namespace SwagLabsAutomation.Tests;
 
 [TestFixture]
-public class TesteUsuariosEspecificos : TestBase
+public class UserSpecificTests : TestBase
 {
-    private LoginPage _paginaLogin;
-    private ProductsPage _paginaProdutos;
-    private CartPage _paginaCarrinho;
+    private LoginPage _loginPage;
+    private ProductsPage _productsPage;
+    private CartPage _cartPage;
 
     [SetUp]
-    public void ConfigurarTeste()
+    public void SetupTest()
     {
-        // Chama o Setup da classe base para configurar driver e relatório
         Setup();
             
-        _paginaLogin = new LoginPage(Driver);
-        _paginaProdutos = new ProductsPage(Driver);
-        _paginaCarrinho = new CartPage(Driver);
+        _loginPage = new LoginPage(Driver);
+        _productsPage = new ProductsPage(Driver);
+        _cartPage = new CartPage(Driver);
             
         AddTestMetadata();
     }
 
     [Test]
-    [Description("Verifica se o locked_out_user não consegue fazer login")]
-    public void UsuarioBloqueado_NaoConsegueFazerLogin()
+    [Description("Verifies that locked_out_user cannot log in")]
+    public void LockedOutUser_CannotLogin()
     {
-        // Arrange - Navegar para a página de login
-        LogStep("Navegando para a página de login", () => {
-            _paginaLogin.NavigateToLoginPage();
+        LogStep("Navigating to login page", () => {
+            _loginPage.NavigateToLoginPage();
         });
 
-        // Act - Tentar fazer login com locked_out_user
-        LogStep("Tentando login com usuário bloqueado", () => {
-            _paginaLogin.Login("locked_out_user", "secret_sauce");
+        LogStep("Attempting login with locked out user", () => {
+            _loginPage.Login("locked_out_user", "secret_sauce");
         });
 
-        // Assert - Verificar se a mensagem de erro específica para usuário bloqueado é exibida
-        LogStep("Verificando mensagem de erro para usuário bloqueado", () => {
-            var mensagemErro = _paginaLogin.GetErrorMessage();
-            LogInfo($"Mensagem de erro obtida: '{mensagemErro}'");
+        LogStep("Verifying error message for locked out user", () => {
+            var errorMessage = _loginPage.GetErrorMessage();
+            LogInfo($"Error message received: '{errorMessage}'");
                 
-            Assert.That(mensagemErro, Is.EqualTo("Epic sadface: Sorry, this user has been locked out."),
-                "Mensagem de erro para usuário bloqueado não foi exibida corretamente");
+            Assert.That(errorMessage, Is.EqualTo("Epic sadface: Sorry, this user has been locked out."),
+                "Error message for locked out user was not displayed correctly");
 
-            // Verificar que o usuário não foi redirecionado para a página de produtos
-            LogInfo("Verificando que usuário permanece na página de login");
+            LogInfo("Verifying user remains on login page");
             if (Driver != null)
                 Assert.That(Driver.Url, Does.Not.Contain("/inventory.html"),
-                    "Usuário bloqueado conseguiu fazer login, o que não deveria acontecer");
+                    "Locked out user was able to login, which should not happen");
 
-            LogPass("Teste de usuário bloqueado concluído com sucesso");
+            LogPass("Locked out user test completed successfully");
         });
     }
 
     [Test]
-    [Description("Verifica comportamentos específicos do problem_user")]
-    public void UsuarioProblema_MostraImagensProdutosIncorretas()
+    [Description("Verifies specific behaviors of problem_user")]
+    public void ProblemUser_ShowsIncorrectProductImages()
     {
-        // Arrange - Login com problem_user
-        LogStep("Realizando login com usuário problema", () => {
-            _paginaLogin.NavigateToLoginPage();
-            _paginaLogin.Login("problem_user", "secret_sauce");
-            LogInfo("Login realizado com usuário problema");
+        LogStep("Logging in with problem user", () => {
+            _loginPage.NavigateToLoginPage();
+            _loginPage.Login("problem_user", "secret_sauce");
+            LogInfo("Login performed with problem user");
         });
 
-        // Act & Assert - Verificar se todas as imagens dos produtos são iguais (comportamento conhecido do problem_user)
-        LogStep("Verificando comportamento das imagens", () => {
-            string primeiraImagem = _paginaProdutos.GetFirstProductImageSrc();
-            LogInfo($"URL da primeira imagem: {primeiraImagem}");
+        LogStep("Verifying image behavior", () => {
+            var firstImage = _productsPage.GetFirstProductImageSrc();
+            LogInfo($"First image URL: {firstImage}");
                 
-            bool todasImagensIguais = _paginaProdutos.AreAllProductImagesTheSame();
-            LogInfo($"Todas as imagens são iguais: {todasImagensIguais}");
+            var allImagesIdentical = _productsPage.AreAllProductImagesTheSame();
+            LogInfo($"All images are identical: {allImagesIdentical}");
                 
-            Assert.That(todasImagensIguais, Is.True,
-                "As imagens dos produtos para problem_user deveriam ser todas iguais");
+            Assert.That(allImagesIdentical, Is.True,
+                "Product images for problem_user should all be identical");
                 
-            if (todasImagensIguais)
-                LogPass("Comportamento de imagens para usuário problema verificado com sucesso");
+            if (allImagesIdentical)
+                LogPass("Image behavior for problem user verified successfully");
         });
     }
 
     [Test]
-    [Description("Verifica problemas de preenchimento de formulário do problem_user")]
-    public void UsuarioProblema_NaoConsegueCompletarCheckout()
+    [Description("Verifies form filling issues with problem_user")]
+    public void ProblemUser_CannotCompleteCheckout()
     {
-        // Arrange - Login com problem_user e adicionar um produto ao carrinho
-        LogStep("Preparando teste de checkout para usuário problema", () => {
-            _paginaLogin.NavigateToLoginPage();
-            _paginaLogin.Login("problem_user", "secret_sauce");
+        LogStep("Preparing checkout test for problem user", () => {
+            _loginPage.NavigateToLoginPage();
+            _loginPage.Login("problem_user", "secret_sauce");
         
-            _paginaProdutos.AddProductToCart("sauce-labs-backpack");
-            _paginaProdutos.GoToCart();
+            _productsPage.AddProductToCart("sauce-labs-backpack");
+            _productsPage.GoToCart();
         });
 
-        // Act - Iniciar checkout
-        LogStep("Iniciando processo de checkout", () => {
-            _paginaCarrinho.GoToCheckout();
+        LogStep("Starting checkout process", () => {
+            _cartPage.GoToCheckout();
         
-            // Tentar preencher o formulário
-            var paginaCheckout = new CheckoutPage(Driver);
+            var checkoutPage = new CheckoutPage(Driver);
+            checkoutPage.FillPersonalInfo("Test", "User", "12345");
         
-            // O problema específico do problem_user é que ele não consegue inserir texto no campo de sobrenome
-            // Vamos verificar isso diretamente:
-            paginaCheckout.FillPersonalInfo("Teste", "Usuario", "12345");
+            var lastNameValue = Driver!.FindElement(By.Id("last-name")).GetAttribute("value");
         
-            // Verificar diretamente o valor do campo de sobrenome
-            var sobrenomeValue = Driver.FindElement(By.Id("last-name")).GetAttribute("value");
+            Assert.That(lastNameValue, Is.Not.EqualTo("User"), 
+                "Last name field should be empty or incorrect for problem_user");
         
-            // Assert - Verificar se o campo de sobrenome não foi preenchido corretamente
-            Assert.That(sobrenomeValue, Is.Not.EqualTo("Usuario"), 
-                "O campo de sobrenome deveria estar vazio ou incorreto para o problem_user");
-        
-            if (sobrenomeValue != "Usuario")
-                LogPass("Comportamento verificado: campo de sobrenome não aceita entrada corretamente");
+            if (lastNameValue != "User")
+                LogPass("Behavior verified: last name field does not accept input correctly");
         });
     }
 
     [Test]
-    [Description("Verifica problemas específicos do problem_user com ordenação")]
-    public void UsuarioProblema_OrdenacaoNaoFunciona()
+    [Description("Verifies specific issues with problem_user sorting")]
+    public void ProblemUser_SortingDoesNotWork()
     {
-        // Arrange - Login com problem_user
-        LogStep("Realizando login com usuário problema", () => {
-            _paginaLogin.NavigateToLoginPage();
-            _paginaLogin.Login("problem_user", "secret_sauce");
+        LogStep("Logging in with problem user", () => {
+            _loginPage.NavigateToLoginPage();
+            _loginPage.Login("problem_user", "secret_sauce");
         });
 
-        // Act e Assert - Verificar como os produtos aparecem após seleção do filtro
-        LogStep("Testando ordenação", () => {
-            // Capturar os nomes dos produtos antes da ordenação
-            var nomesAntes = _paginaProdutos.GetAllProductNames();
+        LogStep("Testing sorting", () => {
+            var namesBefore = _productsPage.GetAllProductNames();
         
-            // Tentar ordenar produtos por nome (Z-A)
             Driver?.FindElement(By.ClassName("product_sort_container")).Click();
             Driver?.FindElement(By.CssSelector("option[value='za']")).Click();
         
-            // Dar tempo para a página responder (adicionar um pequeno delay)
             Thread.Sleep(1000);
         
-            // Capturar os nomes após a ordenação
-            var nomesDepois = _paginaProdutos.GetAllProductNames();
+            var namesAfter = _productsPage.GetAllProductNames();
         
-            // Para o problem_user, os nomes não devem estar ordenados corretamente
-            var ordenacaoFuncionou = true;
+            var sortingWorked = true;
         
-            // Verificar se a ordem está revertida (Z-A)
-            for (int i = 0; i < nomesAntes.Count - 1; i++)
+            for (var i = 0; i < namesBefore.Count - 1; i++)
             {
-                if (String.CompareOrdinal(nomesDepois[i], nomesDepois[i + 1]) >= 0) continue;
-                ordenacaoFuncionou = false;
+                if (string.CompareOrdinal(namesAfter[i], namesAfter[i + 1]) >= 0) continue;
+                sortingWorked = false;
                 break;
             }
         
-            Assert.That(ordenacaoFuncionou, Is.False, 
-                "A ordenação para problem_user não deveria funcionar corretamente");
+            Assert.That(sortingWorked, Is.False, 
+                "Sorting for problem_user should not work correctly");
         
-            LogInfo($"Ordenação funcionou corretamente? {ordenacaoFuncionou}");
+            LogInfo($"Sorting worked correctly? {sortingWorked}");
         
-            if (!ordenacaoFuncionou)
-                LogPass("Comportamento de ordenação incorreta verificado com sucesso");
+            if (!sortingWorked)
+                LogPass("Incorrect sorting behavior verified successfully");
         });
     }
 
     [Test]
-    [Description("Verifica tempo de carregamento do performance_glitch_user")]
-    public void UsuarioPerformance_TemCarregamentoLento()
+    [Description("Verifies loading time of performance_glitch_user")]
+    public void PerformanceUser_HasSlowLoading()
     {
-        // Arrange - Iniciar temporizador
-        LogStep("Testando tempo de carregamento para usuário com glitch de performance", () => {
-            LogInfo("Iniciando cronômetro");
-            var cronometro = System.Diagnostics.Stopwatch.StartNew();
+        LogStep("Testing loading time for performance glitch user", () => {
+            LogInfo("Starting stopwatch");
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-            // Act - Fazer login com performance_glitch_user
-            _paginaLogin.NavigateToLoginPage();
-            LogInfo("Realizando login com usuário performance_glitch_user");
-            _paginaLogin.Login("performance_glitch_user", "secret_sauce");
+            _loginPage.NavigateToLoginPage();
+            LogInfo("Performing login with performance_glitch_user");
+            _loginPage.Login("performance_glitch_user", "secret_sauce");
 
-            // Parar o temporizador após o carregamento da página de produtos
-            cronometro.Stop();
-            long tempoDecorrido = cronometro.ElapsedMilliseconds;
-            LogInfo($"Tempo de carregamento: {tempoDecorrido}ms");
+            stopwatch.Stop();
+            long elapsedTime = stopwatch.ElapsedMilliseconds;
+            LogInfo($"Loading time: {elapsedTime}ms");
 
-            // Assert - Verificar se o tempo de carregamento é significativamente maior 
-            // (ajuste o valor de acordo com o esperado para sua rede/ambiente)
-            Assert.That(tempoDecorrido, Is.GreaterThan(2000),
-                "O tempo de carregamento do performance_glitch_user deveria ser mais lento");
+            Assert.That(elapsedTime, Is.GreaterThan(2000),
+                "Loading time for performance_glitch_user should be slower");
                 
-            if (tempoDecorrido > 2000)
-                LogPass($"Comportamento de lentidão confirmado: {tempoDecorrido}ms");
+            if (elapsedTime > 2000)
+                LogPass($"Slowness behavior confirmed: {elapsedTime}ms");
             else
-                LogFail($"Tempo de carregamento ({tempoDecorrido}ms) não foi significativamente lento");
+                LogFail($"Loading time ({elapsedTime}ms) was not significantly slow");
         });
     }
 
     [Test]
-    [Description("Verifica que o performance_glitch_user pode completar o fluxo de compra, apesar da performance lenta")]
-    public void UsuarioPerformance_ConsegueCompletarCheckout()
+    [Description("Verifies that performance_glitch_user can complete purchase flow, despite slow performance")]
+    public void PerformanceUser_CanCompleteCheckout()
     {
-        // Arrange - Login com performance_glitch_user
-        LogStep("Testando fluxo de checkout para usuário com glitch de performance", () => {
-            _paginaLogin.NavigateToLoginPage();
-            LogInfo("Realizando login com usuário performance_glitch_user");
-            _paginaLogin.Login("performance_glitch_user", "secret_sauce");
-            LogInfo("Login realizado com sucesso");
+        LogStep("Testing checkout flow for performance glitch user", () => {
+            _loginPage.NavigateToLoginPage();
+            LogInfo("Performing login with performance_glitch_user");
+            _loginPage.Login("performance_glitch_user", "secret_sauce");
+            LogInfo("Login successful");
 
-            // Act - Completar o fluxo de compra
-            LogInfo("Adicionando produto ao carrinho");
-            // Correção: usar o ID do produto em vez do nome
-            _paginaProdutos.AddProductToCart("sauce-labs-backpack");
-            LogInfo("Navegando para o carrinho");
-            _paginaProdutos.GoToCart();
-            LogInfo("Iniciando checkout");
-            _paginaCarrinho.GoToCheckout();
+            LogInfo("Adding product to cart");
+            _productsPage.AddProductToCart("sauce-labs-backpack");
+            LogInfo("Navigating to cart");
+            _productsPage.GoToCart();
+            LogInfo("Starting checkout");
+            _cartPage.GoToCheckout();
 
-            var paginaCheckout = new CheckoutPage(Driver);
-            LogInfo("Preenchendo informações pessoais");
-            paginaCheckout.FillPersonalInfo("Teste", "Usuario", "12345");
-            LogInfo("Continuando para próxima etapa");
-            paginaCheckout.ClickContinue();
-            LogInfo("Finalizando compra");
-            paginaCheckout.CompleteCheckout();
+            var checkoutPage = new CheckoutPage(Driver);
+            LogInfo("Filling personal information");
+            checkoutPage.FillPersonalInfo("Test", "User", "12345");
+            LogInfo("Continuing to next step");
+            checkoutPage.ClickContinue();
+            LogInfo("Completing purchase");
+            checkoutPage.CompleteCheckout();
 
-            // Assert - Verificar se a compra foi concluída com sucesso
-            bool pedidoCompleto = paginaCheckout.IsOrderComplete();
-            LogInfo($"Pedido completo: {pedidoCompleto}");
+            bool orderComplete = checkoutPage.IsOrderComplete();
+            LogInfo($"Order complete: {orderComplete}");
                 
-            Assert.That(pedidoCompleto, Is.True,
-                "O performance_glitch_user deveria conseguir completar o checkout");
+            Assert.That(orderComplete, Is.True,
+                "performance_glitch_user should be able to complete checkout");
                 
-            if (pedidoCompleto)
-                LogPass("Checkout completado com sucesso para usuário performance");
+            if (orderComplete)
+                LogPass("Checkout completed successfully for performance user");
             else
-                LogFail("Checkout não foi completado para usuário performance");
+                LogFail("Checkout was not completed for performance user");
         });
     }
 }

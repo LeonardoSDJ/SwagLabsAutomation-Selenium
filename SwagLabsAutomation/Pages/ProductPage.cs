@@ -1,15 +1,13 @@
-﻿using OpenQA.Selenium;
+﻿using System.Text;
+using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 
 namespace SwagLabsAutomation.Pages;
 
 public class ProductsPage(IWebDriver? driver) : BasePage(driver)
 {
-    private readonly By _productItems = By.CssSelector(".inventory_item");
     private readonly By _productImages = By.CssSelector(".inventory_item_img img");
     private readonly By _productNames = By.CssSelector(".inventory_item_name");
-    private readonly By _addToCartButtons = By.CssSelector("[data-test^='add-to-cart']");
-    private readonly By _cartIcon = By.CssSelector(".shopping_cart_link");
     private readonly By _productSortContainer = By.ClassName("product_sort_container");
     private static By ProductsTitle => By.ClassName("title");
     private static By CartBadge => By.ClassName("shopping_cart_badge");
@@ -18,53 +16,45 @@ public class ProductsPage(IWebDriver? driver) : BasePage(driver)
     public bool IsOnProductsPage()
     {
         WaitForElementVisible(ProductsTitle);
-        return Driver.Url.Contains("inventory.html") && IsElementDisplayed(ProductsTitle);
+        return Driver!.Url.Contains("inventory.html") && IsElementDisplayed(ProductsTitle);
     }
 
     public void AddProductToCart(string productId)
     {
-        string addToCartButtonId = $"add-to-cart-{productId}";
-        By addToCartButton = By.Id(addToCartButtonId);
+        var addToCartButtonId = $"add-to-cart-{productId}";
+        var addToCartButton = By.Id(addToCartButtonId);
 
         WaitForElementClickable(addToCartButton);
-        Driver.FindElement(addToCartButton).Click();
+        Driver!.FindElement(addToCartButton).Click();
     }
 
     public int GetCartCount()
     {
-        if (IsElementDisplayed(CartBadge))
-        {
-            return int.Parse(Driver.FindElement(CartBadge).Text);
-        }
-        return 0;
+        return IsElementDisplayed(CartBadge) ? int.Parse(Driver!.FindElement(CartBadge).Text) : 0;
     }
 
     public CartPage GoToCart()
     {
         WaitForElementClickable(CartLink);
-        Driver.FindElement(CartLink).Click();
+        Driver!.FindElement(CartLink).Click();
 
         return new CartPage(Driver);
     }
 
     public string GetFirstProductImageSrc()
     {
-        var images = Driver.FindElements(_productImages);
-        if (images.Count > 0)
-        {
-            return images[0].GetAttribute("src");
-        }
-        return string.Empty;
+        var images = Driver!.FindElements(_productImages);
+        return images.Count > 0 ? images[0].GetAttribute("src") : string.Empty;
     }
 
     public bool AreAllProductImagesTheSame()
     {
-        var images = Driver.FindElements(_productImages);
+        var images = Driver!.FindElements(_productImages);
         if (images.Count <= 1) return true;
 
-        string firstSrc = images[0].GetAttribute("src");
+        var firstSrc = images[0].GetAttribute("src");
 
-        for (int i = 1; i < images.Count; i++)
+        for (var i = 1; i < images.Count; i++)
         {
             if (images[i].GetAttribute("src") != firstSrc)
             {
@@ -77,7 +67,7 @@ public class ProductsPage(IWebDriver? driver) : BasePage(driver)
     public void SortProductsBy(string sortOption)
     {
         WaitForElementVisible(_productSortContainer);
-        var select = new SelectElement(Driver.FindElement(_productSortContainer));
+        var select = new SelectElement(Driver!.FindElement(_productSortContainer));
 
         switch (sortOption.ToLower())
         {
@@ -99,7 +89,7 @@ public class ProductsPage(IWebDriver? driver) : BasePage(driver)
     public bool AreProductsSortedByNameDescending()
     {
         WaitForElementVisible(_productNames);
-        var productNameElements = Driver.FindElements(_productNames);
+        var productNameElements = Driver!.FindElements(_productNames);
 
         if (productNameElements.Count <= 1) return true;
 
@@ -109,34 +99,34 @@ public class ProductsPage(IWebDriver? driver) : BasePage(driver)
         sortedNames.Sort();
         sortedNames.Reverse(); // Para ordem decrescente (Z-A)
 
-        return Enumerable.SequenceEqual(productNames, sortedNames);
+        return productNames.SequenceEqual(sortedNames);
     }
     public List<string> GetAllProductNames()
     {
         WaitForElementVisible(_productNames);
-        var elements = Driver.FindElements(_productNames);
+        var elements = Driver!.FindElements(_productNames);
         return elements.Select(e => e.Text).ToList();
     }
 
     public void RemoveProductFromCart(string productId)
     {
-        string removeButtonId = $"remove-{productId}";
-        By removeButton = By.Id(removeButtonId);
+        var removeButtonId = $"remove-{productId}";
+        var removeButton = By.Id(removeButtonId);
 
         WaitForElementClickable(removeButton);
-        Driver.FindElement(removeButton).Click();
+        Driver!.FindElement(removeButton).Click();
     }
 
-    public List<double> GetProductPrices()
+    private List<double> GetProductPrices()
     {
-        var priceElements = Driver.FindElements(By.CssSelector(".inventory_item_price"));
+        var priceElements = Driver!.FindElements(By.CssSelector(".inventory_item_price"));
         var prices = new List<double>();
         
         foreach (var element in priceElements)
         {
-            string priceText = element.Text;
-            // Remove o símbolo $ e converter para double
-            if (priceText.StartsWith("$") && double.TryParse(priceText.Substring(1), out double price))
+            var priceText = element.Text;
+            // Remove symbol $ e and convert to double
+            if (priceText.StartsWith(new StringBuilder().Append('$').ToString()) && double.TryParse(priceText.AsSpan(1), out var price))
             {
                 prices.Add(price);
             }
@@ -147,7 +137,7 @@ public class ProductsPage(IWebDriver? driver) : BasePage(driver)
 
     public void NavigateToProductDetails(int index)
     {
-        var productElements = Driver.FindElements(_productNames);
+        var productElements = Driver!.FindElements(_productNames);
     
         if (index >= 0 && index < productElements.Count)
         {
@@ -161,7 +151,7 @@ public class ProductsPage(IWebDriver? driver) : BasePage(driver)
 
     public List<string> GetProductDescriptions()
     {
-        var descElements = Driver.FindElements(By.CssSelector(".inventory_item_desc"));
+        var descElements = Driver!.FindElements(By.CssSelector(".inventory_item_desc"));
         return descElements.Select(e => e.Text).ToList();
     }
 
@@ -188,7 +178,7 @@ public class ProductsPage(IWebDriver? driver) : BasePage(driver)
         
         if (prices.Count <= 1) return true;
         
-        for (int i = 0; i < prices.Count - 1; i++)
+        for (var i = 0; i < prices.Count - 1; i++)
         {
             if (prices[i] < prices[i + 1])
             {
@@ -201,7 +191,7 @@ public class ProductsPage(IWebDriver? driver) : BasePage(driver)
 
     public bool IsProductDetailsPage()
     {
-        return Driver.Url.Contains("inventory-item.html");
+        return Driver!.Url.Contains("inventory-item.html");
     }
 
     public ProductsPage BackToProducts()
@@ -209,7 +199,7 @@ public class ProductsPage(IWebDriver? driver) : BasePage(driver)
         var backButton = By.Id("back-to-products");
         
         WaitForElementClickable(backButton);
-        Driver.FindElement(backButton).Click();
+        Driver!.FindElement(backButton).Click();
         WaitForElementVisible(ProductsTitle);
         return this;
     }

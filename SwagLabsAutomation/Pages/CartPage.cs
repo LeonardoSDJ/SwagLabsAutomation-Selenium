@@ -13,12 +13,12 @@ public class CartPage(IWebDriver? driver) : BasePage(driver)
     public bool IsOnCartPage()
     {
         WaitForElementVisible(CartTitle);
-        return Driver.Url.Contains("cart.html") && IsElementDisplayed(CartTitle);
+        return Driver!.Url.Contains("cart.html") && IsElementDisplayed(CartTitle);
     }
 
     public int GetNumberOfCartItems()
     {
-        return Driver.FindElements(CartItems).Count;
+        return Driver!.FindElements(CartItems).Count;
     }
 
     public void RemoveItemFromCart(string productId)
@@ -28,13 +28,13 @@ public class CartPage(IWebDriver? driver) : BasePage(driver)
 
         if (!IsElementDisplayed(removeButton)) return;
         WaitForElementClickable(removeButton);
-        Driver.FindElement(removeButton).Click();
+        Driver!.FindElement(removeButton).Click();
     }
 
     public CheckoutPage GoToCheckout()
     {
         WaitForElementClickable(CheckoutButton);
-        Driver.FindElement(CheckoutButton).Click();
+        Driver!.FindElement(CheckoutButton).Click();
 
         return new CheckoutPage(Driver);
     }
@@ -42,7 +42,7 @@ public class CartPage(IWebDriver? driver) : BasePage(driver)
     public ProductsPage ContinueShopping()
     {
         WaitForElementClickable(ContinueShoppingButton);
-        Driver.FindElement(ContinueShoppingButton).Click();
+        Driver!.FindElement(ContinueShoppingButton).Click();
 
         return new ProductsPage(Driver);
     }

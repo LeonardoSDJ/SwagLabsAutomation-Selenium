@@ -89,8 +89,7 @@ public class CheckoutPage(IWebDriver? driver) : BasePage(driver)
     {
         if (!IsOnCheckoutStepTwo()) return 0;
         var totalPriceLocator = By.ClassName("summary_total_label");
-        string totalText = Driver.FindElement(totalPriceLocator).Text;
-        // Extrai o valor numérico de um texto como "Total: $32.39"
+        var totalText = Driver.FindElement(totalPriceLocator).Text;
         return double.Parse(totalText.Split('$')[1]);
 
     }

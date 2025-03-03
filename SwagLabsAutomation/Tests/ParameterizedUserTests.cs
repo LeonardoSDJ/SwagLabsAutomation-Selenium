@@ -7,8 +7,8 @@ namespace SwagLabsAutomation.Tests;
 [TestFixture]
 public class ParameterizedUserTests : TestBase
 {
-    private LoginPage _paginaLogin;
-    private UserPerformanceTracker? _rastreador;
+    private LoginPage _loginPage;
+    private UserPerformanceTracker? _tracker;
        
     [OneTimeSetUp]
     public void GlobalSetup()
@@ -17,15 +17,15 @@ public class ParameterizedUserTests : TestBase
     }
        
     [SetUp]
-    public void ConfigurarTeste()
+    public void SetupTest()
     {
-        // Chame o Setup da classe base primeiro
+        // Call base class Setup first
         base.Setup();
    
-        _paginaLogin = new LoginPage(Driver);
-        LogInfo("Navegando para a página de login");
-        _paginaLogin.NavigateToLoginPage();
-        LogInfo("Página de login carregada");
+        _loginPage = new LoginPage(Driver);
+        LogInfo("Navigating to login page");
+        _loginPage.NavigateToLoginPage();
+        LogInfo("Login page loaded");
     }
 
     [TearDown]
@@ -33,13 +33,13 @@ public class ParameterizedUserTests : TestBase
     {
         try
         {
-            _rastreador = null;
+            _tracker = null;
             base.TearDown();
             Thread.Sleep(500);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Erro no TearDown: {ex.Message}");
+            Console.WriteLine($"Error in TearDown: {ex.Message}");
         }
     }
        
@@ -50,262 +50,262 @@ public class ParameterizedUserTests : TestBase
         Thread.Sleep(1000);
     }
 
-    // Dados de teste - pares de usuário e resultado esperado do login
-    public static IEnumerable<TestCaseData> CasosTesteLogin
+    // Test data - pairs of user and expected login result
+    public static IEnumerable<TestCaseData> LoginTestCases
     {
         get
         {
             yield return new TestCaseData(UserModel.Standard, true, null)
-                .SetName("Usuario_Padrao_Pode_Fazer_Login");
+                .SetName("Standard_User_Can_Login");
 
             yield return new TestCaseData(UserModel.LockedOut, false, "Epic sadface: Sorry, this user has been locked out.")
-                .SetName("Usuario_Bloqueado_Nao_Pode_Fazer_Login");
+                .SetName("Locked_Out_User_Cannot_Login");
 
             yield return new TestCaseData(UserModel.Problem, true, null)
-                .SetName("Usuario_Problema_Pode_Fazer_Login_Com_Problemas_UI");
+                .SetName("Problem_User_Can_Login_With_UI_Issues");
 
             yield return new TestCaseData(UserModel.PerformanceGlitch, true, null)
-                .SetName("Usuario_Performance_Pode_Fazer_Login_Lentamente");
+                .SetName("Performance_User_Can_Login_Slowly");
         }
     }
 
-    [Test, TestCaseSource(nameof(CasosTesteLogin))]
-    [Description("Testa comportamento de login para diferentes tipos de usuário")]
-    public void Teste_Login_Usuario(UserModel usuario, bool deveTerSucesso, string mensagemErroEsperada)
+    [Test, TestCaseSource(nameof(LoginTestCases))]
+    [Description("Tests login behavior for different user types")]
+    public void Test_User_Login(UserModel user, bool shouldSucceed, string expectedErrorMessage)
     {
         // Arrange
-        LogInfo($"Testando login para usuário: {usuario.Username} ({usuario.Type})");
-        _rastreador = new UserPerformanceTracker(Driver, usuario.Username, Test);
+        LogInfo($"Testing login for user: {user.Username} ({user.Type})");
+        _tracker = new UserPerformanceTracker(Driver, user.Username, Test);
 
         // Act
-        LogStep("Iniciando login", () => {
-            _rastreador.StartTracking("login");
-            var paginaProdutos = _paginaLogin.Login(usuario.Username, usuario.Password);
-            var tempoDecorrido = _rastreador.StopTracking("login");
+        LogStep("Starting login", () => {
+            _tracker.StartTracking("login");
+            var productsPage = _loginPage.Login(user.Username, user.Password);
+            var elapsedTime = _tracker.StopTracking("login");
                
             // Assert
-            if (deveTerSucesso)
+            if (shouldSucceed)
             {
-                LogInfo("Verificando redirecionamento para a página de produtos");
-                bool estaNaPaginaProdutos = paginaProdutos.IsOnProductsPage();
-                Assert.That(estaNaPaginaProdutos, Is.True,
-                    $"O usuário {usuario.Username} deveria fazer login com sucesso");
+                LogInfo("Verifying redirect to products page");
+                bool isOnProductsPage = productsPage.IsOnProductsPage();
+                Assert.That(isOnProductsPage, Is.True,
+                    $"User {user.Username} should login successfully");
 
-                if (estaNaPaginaProdutos)
-                    LogPass($"Login bem-sucedido para {usuario.Username}");
+                if (isOnProductsPage)
+                    LogPass($"Login successful for {user.Username}");
 
-                // Verificação adicional para performance_glitch_user
-                if (usuario.Type == UserType.PerformanceGlitch)
+                // Additional verification for performance_glitch_user
+                if (user.Type == UserType.PerformanceGlitch)
                 {
-                    LogInfo($"Verificando tempo de resposta para usuário com glitch: {tempoDecorrido}ms");
-                    Assert.That(tempoDecorrido, Is.GreaterThan(2000),
-                        "O login com performance_glitch_user deveria ser mais lento");
+                    LogInfo($"Checking response time for glitch user: {elapsedTime}ms");
+                    Assert.That(elapsedTime, Is.GreaterThan(2000),
+                        "Login with performance_glitch_user should be slower");
 
-                    if (tempoDecorrido > 2000)
-                        LogPass($"Comportamento de lentidão confirmado: {tempoDecorrido}ms");
+                    if (elapsedTime > 2000)
+                        LogPass($"Slow performance behavior confirmed: {elapsedTime}ms");
 
-                    _rastreador.LogUserBehavior("Performance Lenta",
-                        $"Login demorou {tempoDecorrido}ms, significativamente mais lento que o normal");
+                    _tracker.LogUserBehavior("Slow Performance",
+                        $"Login took {elapsedTime}ms, significantly slower than normal");
                 }
             }
             else
             {
-                LogInfo("Verificando mensagem de erro para usuário bloqueado");
-                string mensagemErroObtida = _paginaLogin.GetErrorMessage();
-                LogInfo($"Mensagem obtida: '{mensagemErroObtida}'");
+                LogInfo("Checking error message for locked user");
+                string actualErrorMessage = _loginPage.GetErrorMessage();
+                LogInfo($"Message received: '{actualErrorMessage}'");
                    
-                Assert.That(mensagemErroObtida, Is.EqualTo(mensagemErroEsperada),
-                    $"Mensagem de erro para {usuario.Username} não corresponde ao esperado");
+                Assert.That(actualErrorMessage, Is.EqualTo(expectedErrorMessage),
+                    $"Error message for {user.Username} does not match expected");
 
-                if (mensagemErroObtida == mensagemErroEsperada)
-                    LogPass("Mensagem de erro verificada com sucesso");
+                if (actualErrorMessage == expectedErrorMessage)
+                    LogPass("Error message verified successfully");
 
-                _rastreador.LogUserBehavior("Login Bloqueado",
-                    $"Usuário bloqueado tentou fazer login e recebeu a mensagem: {mensagemErroObtida}");
+                _tracker.LogUserBehavior("Locked Login",
+                    $"Locked user attempted to login and received message: {actualErrorMessage}");
             }
         });
     }
 
-    // Dados de teste para verificação de UI por tipo de usuário
-    public static IEnumerable<TestCaseData> CasosTesteUi
+    // Test data for UI verification by user type
+    public static IEnumerable<TestCaseData> UiTestCases
     {
         get
         {
             yield return new TestCaseData(UserModel.Standard, false)
-                .SetName("Usuario_Padrao_Mostra_Imagens_Corretas");
+                .SetName("Standard_User_Shows_Correct_Images");
 
             yield return new TestCaseData(UserModel.Problem, true)
-                .SetName("Usuario_Problema_Mostra_Imagens_Incorretas");
+                .SetName("Problem_User_Shows_Incorrect_Images");
         }
     }
 
-    [Test, TestCaseSource(nameof(CasosTesteUi))]
-    [Description("Testa comportamento de UI para diferentes tipos de usuário")]
-    public void Teste_UI_Usuario(UserModel usuario, bool deveTerMesmasImagens)
+    [Test, TestCaseSource(nameof(UiTestCases))]
+    [Description("Tests UI behavior for different user types")]
+    public void Test_User_UI(UserModel user, bool shouldHaveSameImages)
     {
-        // Arrange - fazer login
-        LogInfo($"Testando UI para usuário: {usuario.Username} ({usuario.Type})");
-        _rastreador = new UserPerformanceTracker(Driver, usuario.Username, Test);
+        // Arrange - do login
+        LogInfo($"Testing UI for user: {user.Username} ({user.Type})");
+        _tracker = new UserPerformanceTracker(Driver, user.Username, Test);
            
-        LogStep("Realizando login", () => {
-            var paginaProdutos = _paginaLogin.Login(usuario.Username, usuario.Password);
+        LogStep("Performing login", () => {
+            var productsPage = _loginPage.Login(user.Username, user.Password);
                
             // Act
-            LogInfo("Verificando comportamento das imagens dos produtos");
-            _rastreador.StartTracking("verificar_ui");
-            bool todasImagensSaoIguais = paginaProdutos.AreAllProductImagesTheSame();
-            _rastreador.StopTracking("verificar_ui");
+            LogInfo("Verifying product images behavior");
+            _tracker.StartTracking("verify_ui");
+            bool allImagesAreSame = productsPage.AreAllProductImagesTheSame();
+            _tracker.StopTracking("verify_ui");
 
             // Assert
-            LogInfo($"Resultado da verificação: todas as imagens são iguais = {todasImagensSaoIguais}");
-            Assert.That(todasImagensSaoIguais, Is.EqualTo(deveTerMesmasImagens),
-                deveTerMesmasImagens
-                    ? "As imagens deveriam ser todas iguais para este tipo de usuário"
-                    : "As imagens não deveriam ser todas iguais para este tipo de usuário");
+            LogInfo($"Verification result: all images are the same = {allImagesAreSame}");
+            Assert.That(allImagesAreSame, Is.EqualTo(shouldHaveSameImages),
+                shouldHaveSameImages
+                    ? "Images should all be the same for this user type"
+                    : "Images should not all be the same for this user type");
 
-            if (todasImagensSaoIguais == deveTerMesmasImagens)
-                LogPass("Comportamento de imagens verificado com sucesso");
+            if (allImagesAreSame == shouldHaveSameImages)
+                LogPass("Image behavior verified successfully");
             else
-                LogFail("Comportamento de imagens diferente do esperado");
+                LogFail("Image behavior different than expected");
 
-            if (deveTerMesmasImagens && todasImagensSaoIguais)
+            if (shouldHaveSameImages && allImagesAreSame)
             {
-                _rastreador.LogUserBehavior("Problema de UI",
-                    "Todas as imagens dos produtos são idênticas, indicando problema de UI conhecido");
+                _tracker.LogUserBehavior("UI Issue",
+                    "All product images are identical, indicating known UI issue");
             }
         });
     }
 
-    // Dados de teste para checkout por tipo de usuário
-    public static IEnumerable<TestCaseData> CasosTesteCheckout
+    // Test data for checkout by user type
+    public static IEnumerable<TestCaseData> CheckoutTestCases
     {
         get
         {
             yield return new TestCaseData(UserModel.Standard, true)
-                .SetName("Usuario_Padrao_Pode_Completar_Checkout");
+                .SetName("Standard_User_Can_Complete_Checkout");
 
             yield return new TestCaseData(UserModel.Problem, false)
-                .SetName("Usuario_Problema_Nao_Pode_Completar_Checkout");
+                .SetName("Problem_User_Cannot_Complete_Checkout");
 
             yield return new TestCaseData(UserModel.PerformanceGlitch, true)
-                .SetName("Usuario_Performance_Pode_Completar_Checkout_Lentamente");
+                .SetName("Performance_User_Can_Complete_Checkout_Slowly");
         }
     }
 
-    [Test, TestCaseSource(nameof(CasosTesteCheckout))]
-    [Description("Testa fluxo de checkout para diferentes tipos de usuário")]
-    public void Teste_Checkout_Usuario(UserModel usuario, bool deveCompletar)
+    [Test, TestCaseSource(nameof(CheckoutTestCases))]
+    [Description("Tests checkout flow for different user types")]
+    public void Test_User_Checkout(UserModel user, bool shouldComplete)
     {
         try
         {
-            // Ignorar teste para usuário bloqueado
-            if (usuario.Type == UserType.LockedOut)
+            // Skip test for locked out user
+            if (user.Type == UserType.LockedOut)
             {
-                LogInfo("Teste de checkout ignorado para usuário bloqueado");
-                Assert.Ignore("Teste de checkout ignorado para usuário bloqueado");
+                LogInfo("Checkout test skipped for locked out user");
+                Assert.Ignore("Checkout test skipped for locked out user");
                 return;
             }
 
-            // Arrange - login e adicionar produto ao carrinho
-            LogInfo($"Testando checkout para usuário: {usuario.Username} ({usuario.Type})");
-            _rastreador = new UserPerformanceTracker(Driver, usuario.Username, Test);
+            // Arrange - login and add product to cart
+            LogInfo($"Testing checkout for user: {user.Username} ({user.Type})");
+            _tracker = new UserPerformanceTracker(Driver, user.Username, Test);
            
-            LogStep("Realizando processo de checkout", () => {
-                var paginaProdutos = _paginaLogin.Login(usuario.Username, usuario.Password);
-                LogInfo("Login realizado com sucesso");
+            LogStep("Performing checkout process", () => {
+                var productsPage = _loginPage.Login(user.Username, user.Password);
+                LogInfo("Login completed successfully");
 
-                _rastreador.StartTracking("checkout_completo");
+                _tracker.StartTracking("complete_checkout");
 
-                // Adicionar produto ao carrinho
-                LogInfo("Adicionando produto ao carrinho");
-                paginaProdutos.AddProductToCart("sauce-labs-backpack");
-                paginaProdutos.GoToCart();
-                LogInfo("Produto adicionado e navegando para o carrinho");
+                // Add product to cart
+                LogInfo("Adding product to cart");
+                productsPage.AddProductToCart("sauce-labs-backpack");
+                productsPage.GoToCart();
+                LogInfo("Product added and navigating to cart");
 
-                var paginaCarrinho = new CartPage(Driver);
-                paginaCarrinho.GoToCheckout();
-                LogInfo("Iniciando checkout");
+                var cartPage = new CartPage(Driver);
+                cartPage.GoToCheckout();
+                LogInfo("Starting checkout");
 
-                // Tentar completar o checkout
-                var paginaCheckout = new CheckoutPage(Driver);
-                LogInfo("Preenchendo informações pessoais");
-                paginaCheckout.FillPersonalInfo("Teste", "Usuario", "12345");
+                // Try to complete checkout
+                var checkoutPage = new CheckoutPage(Driver);
+                LogInfo("Filling personal information");
+                checkoutPage.FillPersonalInfo("Test", "User", "12345");
 
-                bool temErros = paginaCheckout.HasFormErrors();
-                LogInfo($"Formulário possui erros: {temErros}");
+                bool hasErrors = checkoutPage.HasFormErrors();
+                LogInfo($"Form has errors: {hasErrors}");
 
-                if (!temErros)
+                if (!hasErrors)
                 {
-                    LogInfo("Continuando com o checkout");
-                    paginaCheckout.ClickContinue();
-                    paginaCheckout.CompleteCheckout();
-                    LogInfo("Checkout finalizado");
+                    LogInfo("Continuing with checkout");
+                    checkoutPage.ClickContinue();
+                    checkoutPage.CompleteCheckout();
+                    LogInfo("Checkout completed");
                 }
 
-                var tempoDecorrido = _rastreador.StopTracking("checkout_completo");
+                var elapsedTime = _tracker.StopTracking("complete_checkout");
 
-                // Assert - verificar se o checkout foi concluído conforme esperado
-                if (deveCompletar)
+                // Assert - verify if checkout was completed as expected
+                if (shouldComplete)
                 {
-                    bool pedidoCompleto = paginaCheckout.IsOrderComplete();
-                    LogInfo($"Pedido completo: {pedidoCompleto}");
+                    bool orderComplete = checkoutPage.IsOrderComplete();
+                    LogInfo($"Order complete: {orderComplete}");
                    
-                    Assert.That(pedidoCompleto, Is.True,
-                        $"O usuário {usuario.Username} deveria conseguir completar o checkout");
+                    Assert.That(orderComplete, Is.True,
+                        $"User {user.Username} should be able to complete checkout");
 
-                    if (pedidoCompleto)
-                        LogPass("Checkout completado com sucesso");
+                    if (orderComplete)
+                        LogPass("Checkout completed successfully");
                     else
-                        LogFail("Checkout não foi completado como esperado");
+                        LogFail("Checkout was not completed as expected");
 
-                    if (usuario.Type == UserType.PerformanceGlitch)
+                    if (user.Type == UserType.PerformanceGlitch)
                     {
-                        LogInfo($"Verificando tempo de resposta para checkout: {tempoDecorrido}ms");
-                        Assert.That(tempoDecorrido, Is.GreaterThan(3000),
-                            "O checkout com performance_glitch_user deveria ser mais lento");
+                        LogInfo($"Checking response time for checkout: {elapsedTime}ms");
+                        Assert.That(elapsedTime, Is.GreaterThan(3000),
+                            "Checkout with performance_glitch_user should be slower");
 
-                        if (tempoDecorrido > 3000)
-                            LogPass($"Comportamento de lentidão confirmado: {tempoDecorrido}ms");
+                        if (elapsedTime > 3000)
+                            LogPass($"Slow performance behavior confirmed: {elapsedTime}ms");
 
-                        _rastreador.LogUserBehavior("Checkout Lento",
-                            $"Checkout completo demorou {tempoDecorrido}ms, significativamente mais lento que o normal");
+                        _tracker.LogUserBehavior("Slow Checkout",
+                            $"Complete checkout took {elapsedTime}ms, significantly slower than normal");
                     }
                 }
                 else
                 {
-                    bool checkoutFalhou = temErros || !paginaCheckout.IsOrderComplete();
-                    LogInfo($"Checkout falhou conforme esperado: {checkoutFalhou}");
+                    bool checkoutFailed = hasErrors || !checkoutPage.IsOrderComplete();
+                    LogInfo($"Checkout failed as expected: {checkoutFailed}");
                    
-                    Assert.That(checkoutFalhou, Is.True,
-                        $"O usuário {usuario.Username} não deveria conseguir completar o checkout");
+                    Assert.That(checkoutFailed, Is.True,
+                        $"User {user.Username} should not be able to complete checkout");
 
-                    if (checkoutFalhou)
-                        LogPass("Comportamento de checkout para usuário com problemas verificado com sucesso");
+                    if (checkoutFailed)
+                        LogPass("Checkout behavior for problem user verified successfully");
                     else
-                        LogFail("Checkout foi completado, o que não era esperado");
+                        LogFail("Checkout was completed, which was not expected");
 
-                    _rastreador.LogUserBehavior("Problemas no Checkout",
-                        "Não foi possível completar o checkout devido a problemas com o formulário");
+                    _tracker.LogUserBehavior("Checkout Issues",
+                        "Could not complete checkout due to form problems");
                 }
             });
         }
         catch (WebDriverTimeoutException tex)
         {
-            // Tratamento especial para timeouts
-            LogInfo($"Timeout detectado durante o teste: {tex.Message}");
-            LogFail($"Falha por timeout: {tex.Message}");
+            // Special handling for timeouts
+            LogInfo($"Timeout detected during test: {tex.Message}");
+            LogFail($"Failure by timeout: {tex.Message}");
                
-            // Falhar o teste de forma controlada
-            Assert.Fail($"Timeout durante o teste com {usuario.Username}: {tex.Message}");
+            // Fail test in a controlled manner
+            Assert.Fail($"Timeout during test with {user.Username}: {tex.Message}");
         }
         catch (Exception ex)
         {
-            // Tratamento para outras exceções
-            LogInfo($"Exceção detectada durante o teste: {ex.Message}");
-            LogFail($"Falha por exceção: {ex.Message}");
+            // Handling for other exceptions
+            LogInfo($"Exception detected during test: {ex.Message}");
+            LogFail($"Failure by exception: {ex.Message}");
                
-            // Falhar o teste de forma controlada
-            Assert.Fail($"Erro durante o teste com {usuario.Username}: {ex.Message}");
+            // Fail test in a controlled manner
+            Assert.Fail($"Error during test with {user.Username}: {ex.Message}");
         }
     }
 }
