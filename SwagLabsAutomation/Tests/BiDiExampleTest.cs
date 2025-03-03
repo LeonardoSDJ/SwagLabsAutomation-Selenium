@@ -8,7 +8,7 @@ public class BiDiExampleTests : TestBase
 {
     private LoginPage _loginPage;
     private ProductsPage _productsPage;
-    private BiDiHandler _bidiHandler;
+    private BiDiHandler _biDiHandler;
 
     [SetUp]
     public void SetupTest()
@@ -16,17 +16,9 @@ public class BiDiExampleTests : TestBase
         // Chama o Setup da classe base para configurar driver e relatório
         base.Setup();
             
-        // Inicializar o BiDiHandler
-        _bidiHandler = Driver.SetupBiDiMonitoring(Test, 
-            enableNetwork: true);
-        
-        // Habilitar Console e Performance
-        if (_bidiHandler.TestDevToolsConnectivity())
-        {
-            _bidiHandler.EnableConsoleMonitoring();
-            _bidiHandler.EnablePerformanceMonitoring();
-            LogInfo("Monitoramento de Console e Performance habilitados");
-        }
+        // Inicializar o BiDiHandler com monitoramento completo
+        _biDiHandler = Driver!.SetupBiDiMonitoring(Test, enableNetwork: true);
+        _biDiHandler.EnableFullMonitoring();
         
         LogInfo("BiDiHandler configurado com sucesso");
             
@@ -41,10 +33,11 @@ public class BiDiExampleTests : TestBase
         try
         {
             // Processar resultados do BiDi antes de finalizar o teste
-            if (_bidiHandler == null) return;
-            var testName = TestContext.CurrentContext.Test.Name;
-            _bidiHandler.ProcessBiDiResults(testName);
-            LogInfo("Processamento BiDi concluído");
+            {
+                var testName = TestContext.CurrentContext.Test.Name;
+                _biDiHandler.ProcessBiDiResults(testName);
+                LogInfo("Processamento BiDi concluído");
+            }
         }
         catch (Exception ex)
         {
@@ -80,16 +73,10 @@ public class BiDiExampleTests : TestBase
         
         // Assert - Verificar informações capturadas pelo BiDi
         LogStep("Verificando métricas e requisições de rede", () => {
-            // Adicionar informações BiDi ao relatório
-            _bidiHandler.AddInfoToReport();
-            
             // Verificar se não houve erros de JavaScript
-            var jsErrors = _bidiHandler.CollectJavaScriptErrors();
+            var jsErrors = _biDiHandler.CollectJavaScriptErrors();
             Assert.That(jsErrors.Count, Is.EqualTo(0), 
                 $"Foram encontrados {jsErrors.Count} erros de JavaScript durante o teste");
-            
-            // Capturar screenshot final
-            _bidiHandler.CaptureScreenshot("Login_Sucesso");
             
             LogPass("Login realizado com sucesso e monitorado pelo BiDi");
         });
@@ -122,12 +109,6 @@ public class BiDiExampleTests : TestBase
             string errorMessage = _loginPage.GetErrorMessage();
             Assert.That(errorMessage, Contains.Substring("Username and password do not match"), 
                 "Mensagem de erro não corresponde ao esperado");
-            
-            // Verificar requisições de rede e erros de JavaScript
-            _bidiHandler.AddInfoToReport();
-            
-            // Capturar screenshot do erro
-            _bidiHandler.CaptureScreenshot("Login_Invalido_Erro");
             
             LogPass("Teste de login inválido concluído com sucesso");
         });
@@ -162,12 +143,9 @@ public class BiDiExampleTests : TestBase
                 "Mensagem de erro para usuário bloqueado incorreta");
             
             // Verificar se houve erros de JavaScript durante o bloqueio
-            var jsErrors = _bidiHandler.CollectJavaScriptErrors();
+            var jsErrors = _biDiHandler.CollectJavaScriptErrors();
             Assert.That(jsErrors.Count, Is.EqualTo(0), 
                 "Foram encontrados erros de JavaScript durante o bloqueio de usuário");
-            
-            // Capturar screenshot do bloqueio
-            _bidiHandler.CaptureScreenshot("Login_Usuario_Bloqueado");
             
             LogPass("Teste de usuário bloqueado concluído com sucesso");
         });
@@ -182,7 +160,7 @@ public class BiDiExampleTests : TestBase
             _loginPage.NavigateToLoginPage();
             
             // Garantir que o monitoramento de performance está ativo
-            if (!_bidiHandler.TestDevToolsConnectivity())
+            if (!_biDiHandler.TestDevToolsConnectivity())
             {
                 Assert.Ignore("DevTools não disponível para monitoramento de performance");
             }
@@ -201,7 +179,7 @@ public class BiDiExampleTests : TestBase
             
             // Parar o cronômetro
             stopwatch.Stop();
-            long tempoDecorrido = stopwatch.ElapsedMilliseconds;
+            var tempoDecorrido = stopwatch.ElapsedMilliseconds;
             
             // Registrar o tempo no relatório
             LogInfo($"Tempo de login para performance_glitch_user: {tempoDecorrido}ms");
@@ -216,14 +194,6 @@ public class BiDiExampleTests : TestBase
         });
         
         // Assert
-        LogStep("Analisando métricas de performance", () => {
-            // Adicionar todas as informações BiDi ao relatório
-            _bidiHandler.AddInfoToReport();
-            
-            // Capturar screenshot final
-            _bidiHandler.CaptureScreenshot("Login_Performance_Glitch");
-            
-            LogPass("Teste de performance de login concluído com sucesso");
-        });
+        LogPass("Teste de performance de login concluído com sucesso");
     }
 }

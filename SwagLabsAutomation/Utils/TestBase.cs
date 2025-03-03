@@ -24,7 +24,7 @@ namespace SwagLabsAutomation.Utils
             }
             catch (Exception ex)
             {
-                Test?.Fail($"Falha ao inicializar o browser: {ex.Message}");
+                Test.Fail($"Falha ao inicializar o browser: {ex.Message}");
                 throw;
             }
         }
@@ -39,17 +39,20 @@ namespace SwagLabsAutomation.Utils
 
                 if (status == TestStatus.Failed)
                 {
-                    Test?.Fail($"Teste falhou: {errorMessage}");
+                    Test.Fail($"Teste falhou: {errorMessage}");
                     CaptureScreenshot();
                 }
                 else if (status == TestStatus.Passed)
                 {
-                    Test?.Pass("Teste concluído com sucesso");
+                    Test.Pass("Teste concluído com sucesso");
                 }
                 else
                 {
-                    Test?.Skip("Teste foi ignorado");
+                    Test.Skip("Teste foi ignorado");
                 }
+        
+                // Explicitamente fazer o Flush do ExtentReport
+                ExtentReportManager.GetInstance().Flush();
             }
             catch (Exception ex)
             {
@@ -60,10 +63,15 @@ namespace SwagLabsAutomation.Utils
                 // Explicitamente fazer o Dispose do driver (necessário para o NUnit)
                 if (Driver != null)
                 {
-                    try { Driver.Dispose(); } catch { }
+                    try { Driver.Dispose(); }
+                    catch
+                    {
+                        // ignored
+                    }
+
                     Driver = null;
                 }
-        
+
                 // Delega a limpeza para o DriverFactory
                 DriverFactory.QuitDriver();
             }
@@ -122,13 +130,13 @@ namespace SwagLabsAutomation.Utils
         {
             try
             {
-                Test?.Info($"Passo: {stepName}");
+                Test.Info($"Passo: {stepName}");
                 action();
-                Test?.Pass($"Passo '{stepName}' executado com sucesso");
+                Test.Pass($"Passo '{stepName}' executado com sucesso");
             }
             catch (Exception ex)
             {
-                Test?.Fail($"Falha no passo '{stepName}': {ex.Message}");
+                Test.Fail($"Falha no passo '{stepName}': {ex.Message}");
                 CaptureScreenshot();
                 throw;
             }

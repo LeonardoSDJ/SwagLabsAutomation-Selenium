@@ -12,7 +12,7 @@ public static class BiDiExtensions
     /// Cria um BiDiHandler e configura o monitoramento de rede
     /// </summary>
     /// <param name="driver">WebDriver em uso</param>
-    /// <param name="test">Teste Extent para registrar informações</param>
+    /// <param name="test">Test Extent para registrar informações</param>
     /// <param name="enableNetwork">Ativar monitoramento de rede</param>
     /// <returns>BiDiHandler configurado</returns>
     public static BiDiHandler SetupBiDiMonitoring(
@@ -48,35 +48,37 @@ public static class BiDiExtensions
     /// <param name="testName">Nome do teste</param>
     public static void ProcessBiDiResults(this BiDiHandler handler, string testName)
     {
-        // Capturar screenshot em caso de erro ou como parte do relatório
+        // Verificar erros e capturar screenshots relevantes
+        handler.CaptureErrorScreenshots(testName);
+        
+        // Adicionar informações coletadas ao relatório
+        handler.AddInfoToReport();
+        
+        // Capturar screenshot final do teste
         handler.CaptureScreenshot(testName);
         
-        // Coletar e reportar erros de JavaScript (usando implementação simplificada)
-        var jsErrors = handler.CollectJavaScriptErrors();
-        if (jsErrors.Count > 0)
-        {
-            // Registramos os erros de JavaScript encontrados na página
-            LogJsErrors(jsErrors);
-        }
-        
-        // Desativar monitoramento de rede
-        handler.DisableNetworkMonitoring();
+        // Desativar monitoramentos
+        handler.DisableAllMonitoring();
         
         // Liberar recursos
         handler.Dispose();
     }
     
     /// <summary>
-    /// Registra erros de JavaScript no console e no relatório Extent
+    /// Configura monitoramento completo (rede, console e performance)
     /// </summary>
-    /// <param name="errors">Lista de erros de JavaScript</param>
-    private static void LogJsErrors(List<BiDiHandler.ConsoleMessage> errors)
+    /// <param name="handler">BiDiHandler a ser configurado</param>
+    public static void EnableFullMonitoring(this BiDiHandler handler)
     {
-        if (errors.Count == 0) return;
-        
-        foreach (var error in errors)
+        if (handler.TestDevToolsConnectivity())
         {
-            Console.WriteLine($"[JS Error] {error.Level}: {error.Text} - {error.Url}:{error.LineNumber}");
+            handler.EnableNetworkMonitoring();
+            handler.EnableConsoleMonitoring();
+            handler.EnablePerformanceMonitoring();
+        }
+        else
+        {
+            handler.UseSimpleImplementation();
         }
     }
 }
