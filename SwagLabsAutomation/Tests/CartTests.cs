@@ -3,6 +3,8 @@ using SwagLabsAutomation.Utils;
 
 namespace SwagLabsAutomation.Tests
 {
+    [TestFixture]
+    [Parallelizable(ParallelScope.Self)] 
     public class CartTests : TestBase
     {
         private LoginPage _loginPage;
@@ -52,9 +54,12 @@ namespace SwagLabsAutomation.Tests
             // Act - Go to cart
             _cartPage = _productsPage.GoToCart();
 
-            // Assert - Verify we're on cart page
-            Assert.That(_cartPage.IsOnCartPage(), Is.True, "Was not redirected to cart page.");
-            Assert.That(_cartPage.GetNumberOfCartItems(), Is.EqualTo(1), "Incorrect number of items in cart.");
+            Assert.Multiple(() =>
+            {
+                // Assert - Verify we're on cart page
+                Assert.That(_cartPage.IsOnCartPage(), Is.True, "Was not redirected to cart page.");
+                Assert.That(_cartPage.GetNumberOfCartItems(), Is.EqualTo(1), "Incorrect number of items in cart.");
+            });
 
             // Act - Return to continue shopping
             _productsPage = _cartPage.ContinueShopping();

@@ -8,18 +8,25 @@ namespace SwagLabsAutomation.Utils
     {
         protected IWebDriver? Driver;
         protected ExtentTest Test;
+        protected readonly string TestIdentifier;
+    
+        public TestBase()
+        {
+            // Unique identifier for each test
+            TestIdentifier = $"{TestContext.CurrentContext.Test.ClassName}_{TestContext.CurrentContext.Test.Name}";
+        }
 
         [SetUp]
         public virtual void Setup()
         {
             // Initialize ExtentReports test
             Test = ExtentReportManager.CreateTest(TestContext.CurrentContext.Test.Name);
-            Test.Info("Starting test");
+            Test.Info($"Starting test, ID:  {TestIdentifier}");
 
             try
             {
                 // Use DriverFactory exclusively to get driver
-                Driver = DriverFactory.GetDriver();
+                Driver = DriverFactory.GetDriver(TestIdentifier);
                 Test.Info("Browser started and configured");
             }
             catch (Exception ex)

@@ -3,6 +3,8 @@ using SwagLabsAutomation.Utils;
 
 namespace SwagLabsAutomation.Tests;
 
+[TestFixture]
+[Parallelizable(ParallelScope.Self)] 
 public class CheckoutTests : TestBase
 {
     private LoginPage _loginPage;

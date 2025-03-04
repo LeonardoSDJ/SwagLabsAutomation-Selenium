@@ -4,6 +4,7 @@ using SwagLabsAutomation.Utils;
 namespace SwagLabsAutomation.Tests;
 
 [TestFixture]
+[Parallelizable(ParallelScope.Self)] 
 public class BiDiExampleTests : TestBase
 {
     private LoginPage _loginPage;

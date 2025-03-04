@@ -5,6 +5,7 @@ using SwagLabsAutomation.Utils;
 namespace SwagLabsAutomation.Tests;
 
 [TestFixture]
+[Parallelizable(ParallelScope.Self)] 
 public class ParameterizedUserTests : TestBase
 {
     private LoginPage _loginPage;

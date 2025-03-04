@@ -7,9 +7,10 @@ namespace SwagLabsAutomation.Utils;
 public static class DriverFactory
 {
     private static readonly ThreadLocal<IWebDriver?> DriverInstance = new();
+    private static readonly ThreadLocal<string> SessionId = new();
     private static readonly Lock LockObject = new();
-    
-    public static IWebDriver? GetDriver()
+
+    public static IWebDriver? GetDriver(string testName = "")
     {
         if (DriverInstance.Value != null) return DriverInstance.Value;
         
@@ -18,34 +19,42 @@ public static class DriverFactory
             try
             {
                 var options = new ChromeOptions();
-                // Basic settings
+                // Basics configs
                 options.AddArgument("--no-sandbox");
                 options.AddArgument("--disable-dev-shm-usage");
                 options.AddArgument("--disable-gpu");
                 options.AddArgument("start-maximized");
                 
-                // Additional settings to prevent orphaned processes
+                // Configs for avoiding orphans processes
                 options.AddArgument("--disable-extensions");
                 options.AddArgument("--disable-infobars");
                 options.AddArgument("--disable-notifications");
                 options.AddArgument("--disable-popup-blocking");
-                options.AddArgument("--remote-debugging-port=0");
+                
+                // Use a single port of debbuging for evey thread
+                var randomPort = new Random().Next(9000, 10000);
+                options.AddArgument($"--remote-debugging-port={randomPort}");
+                
+                // Add a unique identifier for each instance
+                var instanceId = Guid.NewGuid().ToString().Substring(0, 8);
+                SessionId.Value = $"{testName}_{instanceId}";
+                options.AddArgument($"--user-data-dir=./chrome-data-{SessionId.Value}");
                 
                 // ChromeDriver service with hidden window
                 var service = ChromeDriverService.CreateDefaultService();
                 service.HideCommandPromptWindow = true;
                 
-                // Initialize driver
+                // Initialize the ChromeDriver
                 DriverInstance.Value = new ChromeDriver(service, options);
                 DriverInstance.Value.Manage().Window.Maximize();
                 DriverInstance.Value.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
                 
-                Console.WriteLine("ChromeDriver started successfully");
+                Console.WriteLine($"ChromeDriver started successfully: {SessionId.Value}");
                 return DriverInstance.Value;
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"Error creating driver: {ex.Message}");
+                Console.WriteLine($"Error: {ex.Message}");
                 QuitDriver();
                 throw;
             }

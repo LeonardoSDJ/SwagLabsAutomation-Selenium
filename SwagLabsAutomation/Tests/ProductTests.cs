@@ -6,6 +6,7 @@ using By = OpenQA.Selenium.By;
 namespace SwagLabsAutomation.Tests;
 
 [TestFixture]
+[Parallelizable(ParallelScope.Self)] 
 public class ProductTests : TestBase
 {
     private LoginPage _loginPage;

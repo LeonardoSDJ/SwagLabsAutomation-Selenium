@@ -1,8 +1,11 @@
-﻿using SwagLabsAutomation.Utils;
+﻿using NUnit.Framework;
+using SwagLabsAutomation.Utils;
 
 namespace SwagLabsAutomation;
 
 [SetUpFixture]
+[assembly: Parallelizable(ParallelScope.Fixtures)]
+[assembly: LevelOfParallelism(4)] // Number of parallel threads
 public class TestAssemblyConfig
 {
     [OneTimeSetUp]
