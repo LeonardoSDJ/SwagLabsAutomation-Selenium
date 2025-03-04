@@ -2,7 +2,9 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
+using System.Text;
 using AventStack.ExtentReports;
+using NUnit.Framework.Internal;
 using OpenQA.Selenium;
 using OpenQA.Selenium.DevTools;
 using static System.Int64;
@@ -939,21 +941,135 @@ public class BiDiHandler : IDisposable
     public void AddInfoToReport()
     {
         if (_test == null) return;
-        
+    
         try
         {
-            // Add performance metrics
+            // Adicionar dashboard principal
+            AddBiDiDashboardToReport();
+        
+            // Adicionar alertas e recomendações
+            AddBiDiAlerts();
+        
+            // Adicionar timeline de eventos
+            AddEventTimeline();
+        
+            // Adicionar tabela detalhada de rede
+            AddDetailedNetworkTable();
+        
+            // Adicionar gráfico de requisições
+            AddNetworkTimingChart();
+        
+            // Manter métodos originais para compatibilidade
             AddPerformanceMetricsToReport();
-            
-            // Add network request summary
             AddNetworkRequestsToReport();
-            
-            // Add console messages
             AddConsoleMessagesToReport();
+
+            CaptureSmartScreenshots(_test.Model.Name);
         }
         catch (Exception ex)
         {
             LogWarning($"Error adding information to report: {ex.Message}");
+        }
+    }
+    
+    public void CaptureSmartScreenshots(string testName)
+    {
+        if (_driver == null || _test == null) return;
+        
+        try
+        {
+            var screenshotDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Screenshots");
+            if (!Directory.Exists(screenshotDir))
+            {
+                Directory.CreateDirectory(screenshotDir);
+            }
+            
+            // Marcar capturas já feitas para eventos específicos
+            var capturesMade = new HashSet<string>();
+            
+            // Capturar para erros de JavaScript
+            var jsErrors = _consoleMessages.Where(m => m.Level.ToLower() == "error").ToList();
+            if (jsErrors.Count > 0 && !capturesMade.Contains("js_error"))
+            {
+                var screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
+                var path = Path.Combine(screenshotDir, $"{testName}_JSError_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+                screenshot.SaveAsFile(path);
+                _test.AddScreenCaptureFromPath(path, "Estado após erros JavaScript");
+                capturesMade.Add("js_error");
+            }
+            
+            // Capturar para erros de rede
+            var networkErrors = _networkRequests
+                .Where(r => r.Status == "Failed" || (int.TryParse(r.Status, out int status) && status >= 400))
+                .ToList();
+            
+            if (networkErrors.Count > 0 && !capturesMade.Contains("network_error"))
+            {
+                var screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
+                var path = Path.Combine(screenshotDir, $"{testName}_NetworkError_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+                screenshot.SaveAsFile(path);
+                _test.AddScreenCaptureFromPath(path, "Estado após falhas de rede");
+                capturesMade.Add("network_error");
+            }
+            
+            // Capturar para avisos do console
+            var consoleWarnings = _consoleMessages.Where(m => m.Level.ToLower() == "warning").ToList();
+            if (consoleWarnings.Count > 0 && !capturesMade.Contains("console_warning"))
+            {
+                var screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
+                var path = Path.Combine(screenshotDir, $"{testName}_ConsoleWarning_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+                screenshot.SaveAsFile(path);
+                _test.AddScreenCaptureFromPath(path, "Estado após avisos no console");
+                capturesMade.Add("console_warning");
+            }
+            
+            // Capturar para requisições lentas
+            var slowRequests = _networkRequests
+                .Where(r => r.ResponseTime.HasValue && 
+                          (r.ResponseTime.Value - r.Timestamp).TotalMilliseconds > 1000)
+                .ToList();
+                
+            if (slowRequests.Count > 0 && !capturesMade.Contains("slow_request"))
+            {
+                var screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
+                var path = Path.Combine(screenshotDir, $"{testName}_SlowRequest_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+                screenshot.SaveAsFile(path);
+                _test.AddScreenCaptureFromPath(path, "Estado após requisições lentas");
+                capturesMade.Add("slow_request");
+            }
+            
+            // Capturar screenshot para uso alto de memória
+            var memoryMetric = _performanceMetrics
+                .Where(m => m.Name == "UsedJSHeapSize")
+                .OrderByDescending(m => m.Timestamp)
+                .FirstOrDefault();
+                
+            if (memoryMetric != null && double.TryParse(memoryMetric.Value, out var memoryValue) && 
+                memoryValue > 50000000 && !capturesMade.Contains("high_memory"))
+            {
+                var screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
+                var path = Path.Combine(screenshotDir, $"{testName}_HighMemory_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+                screenshot.SaveAsFile(path);
+                _test.AddScreenCaptureFromPath(path, $"Estado com uso alto de memória ({memoryValue/1000000:F1}MB)");
+                capturesMade.Add("high_memory");
+            }
+            
+            // Capturar screenshot final sempre
+            if (!capturesMade.Contains("final"))
+            {
+                var screenshot = ((ITakesScreenshot)_driver).GetScreenshot();
+                var path = Path.Combine(screenshotDir, $"{testName}_Final_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+                screenshot.SaveAsFile(path);
+                _test.AddScreenCaptureFromPath(path, "Estado final da página");
+                capturesMade.Add("final");
+            }
+            
+            // Registrar informações sobre capturas realizadas
+            LogInfo($"Capturas inteligentes realizadas: {string.Join(", ", capturesMade)}");
+        }
+        catch (Exception ex)
+        {
+            LogWarning($"Erro ao capturar screenshots inteligentes: {ex.Message}");
         }
     }
 
@@ -964,23 +1080,68 @@ public class BiDiHandler : IDisposable
     {
         if (_test == null || _performanceMetrics.Count <= 0) return;
         
-        var metrics = _performanceMetrics
-            .GroupBy(m => m.Name)
-            .Select(g => new
+        // Adicione título e descrição
+        _test.Info("<h3>Métricas de Performance do Chrome</h3>");
+        _test.Info("<p>Valores das principais métricas coletadas durante a execução do teste.</p>");
+        
+        // Agrupar métricas por categorias
+        var metricsGroups = _performanceMetrics
+            .GroupBy(m => GetMetricCategory(m.Name))
+            .ToDictionary(g => g.Key, g => g.ToList());
+        
+        foreach (var group in metricsGroups)
+        {
+            _test.Info($"<h4>Categoria: {group.Key}</h4>");
+            
+            var metricsTable = "<table border='1' style='width:100%; border-collapse: collapse;'>" +
+                              "<tr style='background-color:#333; color:white;'>" +
+                              "<th>Métrica</th><th>Valor Final</th><th>Min</th><th>Max</th><th>Avg</th></tr>";
+            
+            foreach (var metricName in group.Value.Select(m => m.Name).Distinct())
             {
-                Name = g.Key,
-                LastValue = g.OrderByDescending(m => m.Timestamp).First().Value,
-                Min = g.Min(m => double.TryParse(g.First().Value, out var val) ? val : 0),
-                Max = g.Max(m => double.TryParse(g.First().Value, out var val) ? val : 0),
-                Count = g.Count()
-            })
-            .ToList();
+                var metrics = _performanceMetrics.Where(m => m.Name == metricName).ToList();
+                var lastValue = metrics.OrderByDescending(m => m.Timestamp).First().Value;
+                var values = metrics.Select(m => double.TryParse(m.Value, out var val) ? val : 0).ToList();
+                
+                metricsTable += $"<tr><td>{GetFriendlyMetricName(metricName)}</td>" +
+                               $"<td>{lastValue}</td>" +
+                               $"<td>{values.Min()}</td>" +
+                               $"<td>{values.Max()}</td>" +
+                               $"<td>{values.Average():F2}</td></tr>";
+            }
+            
+            metricsTable += "</table>";
+            _test.Info(metricsTable);
+        }
+    }
+
+    private string GetMetricCategory(string metricName)
+    {
+        if (metricName.Contains("Memory")) return "Memória";
+        if (metricName.Contains("CPU")) return "CPU";
+        if (metricName.Contains("Render") || metricName.Contains("Paint")) return "Renderização";
+        if (metricName.Contains("Load") || metricName.Contains("DOMContent")) return "Carregamento";
+        return "Outros";
+    }
+
+    private string GetFriendlyMetricName(string metricName)
+    {
+        // Mapear nomes técnicos para nomes amigáveis
+        var nameMap = new Dictionary<string, string>
+        {
+            {"Documents", "Documentos HTML"},
+            {"Frames", "Frames Renderizados"},
+            {"JSEventListeners", "Event Listeners JavaScript"},
+            {"LayoutObjects", "Objetos de Layout"},
+            {"MediaKeySessions", "Sessões de Mídia"},
+            {"Nodes", "Nós DOM"},
+            {"Resources", "Recursos Carregados"},
+            {"ScriptExecutionTime", "Tempo de Execução JavaScript"},
+            {"UsedJSHeapSize", "Heap JavaScript Utilizado"},
+            {"ProcessTime", "Tempo de Processamento"}
+        };
         
-        var metricsTable = metrics.Aggregate("<table border='1'><tr><th>Metric</th><th>Value</th><th>Min</th><th>Max</th></tr>", 
-            (current, metric) => current + $"<tr><td>{metric.Name}</td><td>{metric.LastValue}</td><td>{metric.Min}</td><td>{metric.Max}</td></tr>");
-        metricsTable += "</table>";
-        
-        _test.Info(metricsTable);
+        return nameMap.TryGetValue(metricName, out var friendlyName) ? friendlyName : metricName;
     }
 
     /// <summary>
@@ -1014,6 +1175,409 @@ public class BiDiHandler : IDisposable
             
             _test.Warning(failuresTable);
         }
+    }
+    
+    private void AddNetworkTimingChart()
+    {
+        if (_test == null || _networkRequests.Count <= 0) return;
+        
+        var requests = _networkRequests
+            .Where(r => r.ResponseTime.HasValue)
+            .OrderByDescending(r => r.ResponseTime - r.Timestamp)
+            .Take(10)
+            .ToList();
+        
+        if (requests.Count <= 0) return;
+        
+        // Calcular tempos de resposta
+        var maxTime = requests.Max(r => (r.ResponseTime.Value - r.Timestamp).TotalMilliseconds);
+        var chartHeight = 300;
+        var chartWidth = 600;
+        var barWidth = chartWidth / (requests.Count * 2);
+        
+        var svg = new StringBuilder();
+        svg.AppendLine($"<svg width='{chartWidth}' height='{chartHeight}' xmlns='http://www.w3.org/2000/svg'>");
+        svg.AppendLine("<style>");
+        svg.AppendLine(".bar { fill: #4682B4; }");
+        svg.AppendLine(".bar:hover { fill: #5A9BD5; }");
+        svg.AppendLine(".axis { stroke: #333; stroke-width: 1; }");
+        svg.AppendLine(".label { font-family: Arial; font-size: 12px; }");
+        svg.AppendLine("</style>");
+        
+        // Eixos
+        svg.AppendLine($"<line x1='50' y1='10' x2='50' y2='{chartHeight-30}' class='axis' />");
+        svg.AppendLine($"<line x1='50' y1='{chartHeight-30}' x2='{chartWidth-10}' y2='{chartHeight-30}' class='axis' />");
+        svg.AppendLine($"<text x='20' y='{chartHeight/2}' transform='rotate(-90 20,{chartHeight/2})' class='label'>Tempo (ms)</text>");
+        
+        // Barras
+        for (int i = 0; i < requests.Count; i++)
+        {
+            var request = requests[i];
+            var responseTime = (request.ResponseTime.Value - request.Timestamp).TotalMilliseconds;
+            var barHeight = (responseTime / maxTime) * (chartHeight - 50);
+            var x = 60 + (i * barWidth * 2);
+            var y = chartHeight - 30 - barHeight;
+            
+            svg.AppendLine($"<rect x='{x}' y='{y}' width='{barWidth}' height='{barHeight}' class='bar'>");
+            svg.AppendLine($"<title>{request.Url.Split('/').Last()} - {responseTime:F0}ms</title>");
+            svg.AppendLine("</rect>");
+            
+            var resourceName = request.Url.Split('/').Last();
+            if (resourceName.Length > 15) resourceName = resourceName.Substring(0, 12) + "...";
+            
+            svg.AppendLine($"<text x='{x + barWidth/2}' y='{chartHeight-10}' " +
+                          $"transform='rotate(45 {x + barWidth/2},{chartHeight-10})' " +
+                          $"text-anchor='start' class='label'>{resourceName}</text>");
+            
+            svg.AppendLine($"<text x='{x + barWidth/2}' y='{y-5}' text-anchor='middle' class='label'>{responseTime:F0}ms</text>");
+        }
+        
+        svg.AppendLine("</svg>");
+        
+        _test.Info("<h3>Top 10 Requisições por Tempo de Resposta</h3>");
+        _test.Info(svg.ToString());
+    }
+    
+    private void AddDetailedNetworkTable()
+    {
+        if (_test == null || _networkRequests.Count <= 0) return;
+        
+        // Agrupar por tipo de recurso
+        var resourceGroups = _networkRequests
+            .GroupBy(r => r.ResourceType)
+            .OrderByDescending(g => g.Count())
+            .ToDictionary(g => g.Key, g => g.ToList());
+        
+        _test.Info("<h3>Análise de Requisições de Rede</h3>");
+        
+        // Sumário por tipo de recurso
+        var summaryTable = "<table border='1' style='width:100%; border-collapse: collapse;'>" +
+                          "<tr style='background-color:#333; color:white;'>" +
+                          "<th>Tipo de Recurso</th><th>Quantidade</th><th>Tempo Médio (ms)</th><th>Tamanho Total</th></tr>";
+        
+        foreach (var group in resourceGroups)
+        {
+            var resourceType = string.IsNullOrEmpty(group.Key) ? "Outros" : group.Key;
+            var count = group.Value.Count;
+            var avgTime = group.Value
+                .Where(r => r.ResponseTime.HasValue)
+                .Select(r => (r.ResponseTime.Value - r.Timestamp).TotalMilliseconds)
+                .DefaultIfEmpty(0)
+                .Average();
+            
+            summaryTable += $"<tr><td>{resourceType}</td><td>{count}</td><td>{avgTime:F2}</td><td>N/A</td></tr>";
+        }
+        
+        summaryTable += "</table>";
+        _test.Info(summaryTable);
+        
+        // Detalhes das requisições com problemas
+        var failedRequests = _networkRequests
+            .Where(r => r.Status == "Failed" || (int.TryParse(r.Status, out int status) && status >= 400))
+            .ToList();
+        
+        if (failedRequests.Count > 0)
+        {
+            _test.Warning("<h4>Requisições com Falha</h4>");
+            
+            var failedTable = "<table border='1' style='width:100%; border-collapse: collapse;'>" +
+                             "<tr style='background-color:#FFA07A; color:black;'>" +
+                             "<th>URL</th><th>Método</th><th>Status</th><th>Erro</th><th>Tipo</th></tr>";
+            
+            foreach (var request in failedRequests)
+            {
+                failedTable += $"<tr><td>{TruncateUrl(request.Url)}</td>" +
+                              $"<td>{request.Method}</td>" +
+                              $"<td>{request.Status}</td>" +
+                              $"<td>{request.StatusText}</td>" +
+                              $"<td>{request.ResourceType}</td></tr>";
+            }
+            
+            failedTable += "</table>";
+            _test.Warning(failedTable);
+        }
+        
+        // Top requisições mais lentas
+        var slowestRequests = _networkRequests
+            .Where(r => r.ResponseTime.HasValue)
+            .OrderByDescending(r => (r.ResponseTime.Value - r.Timestamp).TotalMilliseconds)
+            .Take(5)
+            .ToList();
+        
+        if (slowestRequests.Count > 0)
+        {
+            _test.Info("<h4>Requisições Mais Lentas</h4>");
+            
+            var slowTable = "<table border='1' style='width:100%; border-collapse: collapse;'>" +
+                           "<tr style='background-color:#D8BFD8; color:black;'>" +
+                           "<th>URL</th><th>Método</th><th>Tempo (ms)</th><th>Tipo</th></tr>";
+            
+            foreach (var request in slowestRequests)
+            {
+                var responseTime = (request.ResponseTime.Value - request.Timestamp).TotalMilliseconds;
+                
+                slowTable += $"<tr><td>{TruncateUrl(request.Url)}</td>" +
+                            $"<td>{request.Method}</td>" +
+                            $"<td>{responseTime:F2}</td>" +
+                            $"<td>{request.ResourceType}</td></tr>";
+            }
+            
+            slowTable += "</table>";
+            _test.Info(slowTable);
+        }
+    }
+    
+    public void AddBiDiAlerts()
+    {
+        if (_test == null) return;
+        
+        var hasAlerts = false;
+        
+        // Verificar erros JavaScript
+        var jsErrors = _consoleMessages.Where(m => m.Level.ToLower() == "error").ToList();
+        if (jsErrors.Count > 0)
+        {
+            hasAlerts = true;
+            _test.Warning("<div style='background-color: #FFF3CD; color: #856404; padding: 10px; border-left: 5px solid #FFD700; margin: 10px 0;'>" +
+                         $"<h4 style='margin-top: 0;'>⚠️ Detectados {jsErrors.Count} Erros JavaScript</h4>" +
+                         $"<p>Erros JavaScript podem indicar problemas na aplicação que afetam a experiência do usuário.</p>" +
+                         $"</div>");
+        }
+        
+        // Verificar requisições lentas
+        var slowThreshold = 1000; // 1 segundo
+        var slowRequests = _networkRequests
+            .Where(r => r.ResponseTime.HasValue && (r.ResponseTime.Value - r.Timestamp).TotalMilliseconds > slowThreshold)
+            .ToList();
+        
+        if (slowRequests.Count > 0)
+        {
+            hasAlerts = true;
+            _test.Warning("<div style='background-color: #D8F3DC; color: #274E13; padding: 10px; border-left: 5px solid #52B788; margin: 10px 0;'>" +
+                         $"<h4 style='margin-top: 0;'>⏱️ Detectadas {slowRequests.Count} Requisições Lentas</h4>" +
+                         $"<p>Requisições que levam mais de {slowThreshold}ms podem impactar o desempenho percebido pelo usuário.</p>" +
+                         $"</div>");
+        }
+        
+        // Verificar falhas de rede
+        var networkErrors = _networkRequests
+            .Where(r => r.Status == "Failed" || (int.TryParse(r.Status, out int status) && status >= 400))
+            .ToList();
+        
+        if (networkErrors.Count > 0)
+        {
+            hasAlerts = true;
+            _test.Warning("<div style='background-color: #F8D7DA; color: #721C24; padding: 10px; border-left: 5px solid #DC3545; margin: 10px 0;'>" +
+                         $"<h4 style='margin-top: 0;'>🚫 Detectadas {networkErrors.Count} Falhas de Rede</h4>" +
+                         $"<p>Falhas em requisições de rede podem indicar recursos indisponíveis ou problemas de conectividade.</p>" +
+                         $"</div>");
+        }
+        
+        // Verificar uso excessivo de memória
+        var memoryMetric = _performanceMetrics
+            .Where(m => m.Name == "UsedJSHeapSize")
+            .OrderByDescending(m => m.Timestamp)
+            .FirstOrDefault();
+        
+        if (memoryMetric != null && double.TryParse(memoryMetric.Value, out var memoryValue) && memoryValue > 50000000) // 50MB
+        {
+            hasAlerts = true;
+            _test.Warning("<div style='background-color: #E2E3E5; color: #383D41; padding: 10px; border-left: 5px solid #6C757D; margin: 10px 0;'>" +
+                         $"<h4 style='margin-top: 0;'>💾 Uso Elevado de Memória JavaScript</h4>" +
+                         $"<p>O uso de memória JavaScript atingiu {memoryValue / 1000000:F1}MB, o que pode indicar vazamentos de memória.</p>" +
+                         $"</div>");
+        }
+        
+        if (!hasAlerts)
+        {
+            _test.Pass("<div style='background-color: #D4EDDA; color: #155724; padding: 10px; border-left: 5px solid #28A745; margin: 10px 0;'>" +
+                      "<h4 style='margin-top: 0;'>✅ Nenhum Problema Detectado</h4>" +
+                      "<p>O monitoramento BiDi não detectou problemas significativos durante a execução do teste.</p>" +
+                      "</div>");
+        }
+    }
+    
+    private void AddEventTimeline()
+    {
+        if (_test == null) return;
+        
+        var allEvents = new List<(string Type, string Name, DateTime Time, string Color)>();
+        
+        // Adicionar requisições de rede
+        foreach (var req in _networkRequests.Where(r => r.ResponseTime.HasValue))
+        {
+            allEvents.Add(("Req Start", ExtractResourceName(req.Url), req.Timestamp, "#4682B4"));
+            allEvents.Add(("Req End", ExtractResourceName(req.Url), req.ResponseTime.Value, "#4682B4"));
+        }
+        
+        // Adicionar mensagens de console
+        foreach (var msg in _consoleMessages)
+        {
+            var color = msg.Level.ToLower() switch
+            {
+                "error" => "#FF6347",
+                "warning" => "#FFD700",
+                _ => "#90EE90"
+            };
+            allEvents.Add(("Console", msg.Text.Length > 30 ? msg.Text.Substring(0, 27) + "..." : msg.Text, 
+                        msg.Timestamp, color));
+        }
+        
+        // Adicionar métricas de performance
+        foreach (var metric in _performanceMetrics.Where(m => m.Name.Contains("LoadTime") || m.Name.Contains("Time")))
+        {
+            allEvents.Add(("Metric", metric.Name, metric.Timestamp, "#BA55D3"));
+        }
+        
+        if (allEvents.Count <= 0) return;
+        
+        // Ordenar eventos por tempo
+        allEvents = allEvents.OrderBy(e => e.Time).ToList();
+        
+        // Determinar escala de tempo
+        var startTime = allEvents.First().Time;
+        var endTime = allEvents.Last().Time;
+        var duration = (endTime - startTime).TotalMilliseconds;
+        
+        if (duration <= 0) return;
+        
+        var timelineWidth = 800;
+        var timelineHeight = 30 * Math.Min(allEvents.Count, 15); // Limitar altura
+        
+        var svg = new StringBuilder();
+        svg.AppendLine($"<svg width='{timelineWidth}' height='{timelineHeight+50}' xmlns='http://www.w3.org/2000/svg'>");
+        svg.AppendLine("<style>");
+        svg.AppendLine(".event-line { stroke-width: 2; }");
+        svg.AppendLine(".event-label { font-family: Arial; font-size: 12px; }");
+        svg.AppendLine(".timeline-axis { stroke: #333; stroke-width: 1; }");
+        svg.AppendLine("</style>");
+        
+        // Eixo do tempo
+        svg.AppendLine($"<line x1='50' y1='{timelineHeight+20}' x2='{timelineWidth-10}' y2='{timelineHeight+20}' class='timeline-axis' />");
+        
+        // Marcações de tempo
+        for (int i = 0; i <= 10; i++)
+        {
+            var x = 50 + (i * (timelineWidth - 60) / 10);
+            var timeValue = duration * i / 10;
+            
+            svg.AppendLine($"<line x1='{x}' y1='{timelineHeight+15}' x2='{x}' y2='{timelineHeight+25}' class='timeline-axis' />");
+            svg.AppendLine($"<text x='{x}' y='{timelineHeight+40}' text-anchor='middle' class='event-label'>{timeValue:F0}ms</text>");
+        }
+        
+        // Eventos (limitando para evitar sobrecarga visual)
+        var displayEvents = allEvents.Take(15).ToList();
+        for (int i = 0; i < displayEvents.Count; i++)
+        {
+            var evt = displayEvents[i];
+            var timeOffset = (evt.Time - startTime).TotalMilliseconds;
+            var x = 50 + (timeOffset / duration) * (timelineWidth - 60);
+            var y = 20 + (i * 30);
+            
+            svg.AppendLine($"<line x1='{x}' y1='10' x2='{x}' y2='{timelineHeight+10}' stroke='{evt.Color}' stroke-dasharray='2,2' class='event-line' />");
+            svg.AppendLine($"<circle cx='{x}' cy='{y}' r='5' fill='{evt.Color}' />");
+            svg.AppendLine($"<text x='{x+10}' y='{y+5}' class='event-label'>{evt.Type}: {evt.Name}</text>");
+        }
+        
+        svg.AppendLine("</svg>");
+        
+        _test.Info("<h3>Timeline de Eventos do Teste</h3>");
+        _test.Info("<p>Visualização cronológica dos principais eventos durante a execução.</p>");
+        _test.Info(svg.ToString());
+        
+        if (allEvents.Count > 15)
+        {
+            _test.Info($"<p><i>Nota: Exibindo apenas os primeiros 15 de {allEvents.Count} eventos.</i></p>");
+        }
+    }
+    
+    public void AddBiDiDashboardToReport()
+    {
+        if (_test == null) return;
+        
+        _test.Info("<div style='background-color: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;'>");
+        _test.Info("<h2 style='color: #333; border-bottom: 2px solid #ddd; padding-bottom: 8px;'>Dashboard BiDi</h2>");
+        
+        // Estatísticas gerais
+        _test.Info("<div style='display: flex; justify-content: space-between; margin-bottom: 15px;'>");
+        
+        // Requisições de rede
+        int totalRequests = _networkRequests.Count;
+        int successRequests = _networkRequests.Count(r => int.TryParse(r.Status, out var status) && status is >= 200 and < 400);
+        int failedRequests = _networkRequests.Count(r => r.Status == "Failed" || (int.TryParse(r.Status, out int status) && status >= 400));
+        double avgResponseTime = _networkRequests
+            .Where(r => r.ResponseTime.HasValue)
+            .Select(r => (r.ResponseTime.Value - r.Timestamp).TotalMilliseconds)
+            .DefaultIfEmpty(0)
+            .Average();
+        
+        _test.Info($"<div style='flex: 1; background-color: #fff; padding: 10px; border-radius: 5px; margin-right: 10px;'>" +
+                  $"<h3 style='margin-top: 0; color: #4682B4;'>Rede</h3>" +
+                  $"<p><b>Total de requisições:</b> {totalRequests}</p>" +
+                  $"<p><b>Sucesso:</b> {successRequests} ({(totalRequests > 0 ? (successRequests * 100.0 / totalRequests) : 0):F1}%)</p>" +
+                  $"<p><b>Falhas:</b> {failedRequests}</p>" +
+                  $"<p><b>Tempo médio:</b> {avgResponseTime:F1}ms</p>" +
+                  $"</div>");
+        
+        // Console
+        int totalMessages = _consoleMessages.Count;
+        int errorMessages = _consoleMessages.Count(m => m.Level.ToLower() == "error");
+        int warningMessages = _consoleMessages.Count(m => m.Level.ToLower() == "warning");
+        
+        _test.Info($"<div style='flex: 1; background-color: #fff; padding: 10px; border-radius: 5px;'>" +
+                  $"<h3 style='margin-top: 0; color: #D2691E;'>Console</h3>" +
+                  $"<p><b>Total de mensagens:</b> {totalMessages}</p>" +
+                  $"<p><b>Erros:</b> {errorMessages}</p>" +
+                  $"<p><b>Avisos:</b> {warningMessages}</p>" +
+                  $"<p><b>Info:</b> {totalMessages - errorMessages - warningMessages}</p>" +
+                  $"</div>");
+        
+        _test.Info("</div>");
+        
+        // Performance - Métricas principais
+        if (_performanceMetrics.Count > 0)
+        {
+            _test.Info("<h3 style='color: #333;'>Métricas de Performance</h3>");
+            
+            var keyMetrics = new[] { "UsedJSHeapSize", "Nodes", "LayoutObjects", "JSEventListeners", "Documents" };
+            var metricsTable = "<table style='width:100%; border-collapse: collapse; border: 1px solid #ddd;'>" +
+                              "<tr style='background-color: #f0f0f0;'>" +
+                              "<th style='text-align: left; padding: 8px; border: 1px solid #ddd;'>Métrica</th>" +
+                              "<th style='text-align: right; padding: 8px; border: 1px solid #ddd;'>Valor Final</th>" +
+                              "</tr>";
+            
+            foreach (var metricName in keyMetrics)
+            {
+                var metric = _performanceMetrics
+                    .Where(m => m.Name == metricName)
+                    .OrderByDescending(m => m.Timestamp)
+                    .FirstOrDefault();
+                
+                if (metric != null)
+                {
+                    metricsTable += $"<tr>" +
+                                   $"<td style='text-align: left; padding: 8px; border: 1px solid #ddd;'>{GetFriendlyMetricName(metric.Name)}</td>" +
+                                   $"<td style='text-align: right; padding: 8px; border: 1px solid #ddd;'>{metric.Value}</td>" +
+                                   $"</tr>";
+                }
+            }
+            
+            metricsTable += "</table>";
+            _test.Info(metricsTable);
+        }
+        
+        _test.Info("</div>");
+    }
+
+    private string ExtractResourceName(string url)
+    {
+        var parts = url.Split('/');
+        return parts.Length > 0 ? parts.Last() : url;
+    }
+
+    private string TruncateUrl(string url)
+    {
+        return url.Length <= 60 ? url : url.Substring(0, 57) + "...";
     }
 
     /// <summary>

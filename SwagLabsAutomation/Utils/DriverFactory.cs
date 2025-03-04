@@ -38,7 +38,7 @@ public static class DriverFactory
                 // Add a unique identifier for each instance
                 var instanceId = Guid.NewGuid().ToString().Substring(0, 8);
                 SessionId.Value = $"{testName}_{instanceId}";
-                options.AddArgument($"--user-data-dir=./chrome-data-{SessionId.Value}");
+                //options.AddArgument($"--user-data-dir=./chrome-data-{SessionId.Value}");
                 
                 // ChromeDriver service with hidden window
                 var service = ChromeDriverService.CreateDefaultService();

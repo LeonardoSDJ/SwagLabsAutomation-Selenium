@@ -5,7 +5,6 @@ using SwagLabsAutomation.Utils;
 namespace SwagLabsAutomation.Tests;
 
 [TestFixture]
-[Parallelizable(ParallelScope.Self)] 
 public class ParameterizedUserTests : TestBase
 {
     private LoginPage _loginPage;
@@ -20,7 +19,6 @@ public class ParameterizedUserTests : TestBase
     [SetUp]
     public void SetupTest()
     {
-        // Call base class Setup first
         base.Setup();
    
         _loginPage = new LoginPage(Driver);
@@ -74,6 +72,7 @@ public class ParameterizedUserTests : TestBase
     [Description("Tests login behavior for different user types")]
     public void Test_User_Login(UserModel user, bool shouldSucceed, string expectedErrorMessage)
     {
+        
         // Arrange
         LogInfo($"Testing login for user: {user.Username} ({user.Type})");
         _tracker = new UserPerformanceTracker(Driver, user.Username, Test);
@@ -197,6 +196,7 @@ public class ParameterizedUserTests : TestBase
     [Description("Tests checkout flow for different user types")]
     public void Test_User_Checkout(UserModel user, bool shouldComplete)
     {
+        
         try
         {
             // Skip test for locked out user

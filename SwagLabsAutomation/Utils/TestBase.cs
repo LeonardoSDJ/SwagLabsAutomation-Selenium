@@ -8,26 +8,25 @@ namespace SwagLabsAutomation.Utils
     {
         protected IWebDriver? Driver;
         protected ExtentTest Test;
-        protected readonly string TestIdentifier;
-    
-        public TestBase()
-        {
-            // Unique identifier for each test
-            TestIdentifier = $"{TestContext.CurrentContext.Test.ClassName}_{TestContext.CurrentContext.Test.Name}";
-        }
+        protected readonly string TestIdentifier = $"{TestContext.CurrentContext.Test.ClassName}_{TestContext.CurrentContext.Test.Name}";
+        protected BiDiHandler? BiDiHandler;
 
         [SetUp]
         public virtual void Setup()
         {
             // Initialize ExtentReports test
             Test = ExtentReportManager.CreateTest(TestContext.CurrentContext.Test.Name);
-            Test.Info($"Starting test, ID:  {TestIdentifier}");
+            Test.Info($"Starting test, ID: {TestIdentifier}");
 
             try
             {
-                // Use DriverFactory exclusively to get driver
                 Driver = DriverFactory.GetDriver(TestIdentifier);
                 Test.Info("Browser started and configured");
+            
+                // Initialize BiDiHandler with full monitoring by default
+                BiDiHandler = Driver!.SetupBiDiMonitoring(Test, enableNetwork: true);
+                BiDiHandler.EnableFullMonitoring();
+                Test.Info("BiDi monitoring fully enabled");
             }
             catch (Exception ex)
             {
@@ -44,45 +43,61 @@ namespace SwagLabsAutomation.Utils
                 var status = TestContext.CurrentContext.Result.Outcome.Status;
                 var errorMessage = TestContext.CurrentContext.Result.Message;
 
-                if (status == TestStatus.Failed)
+                // Process BiDi results if enabled
+                if (BiDiHandler != null)
                 {
-                    Test.Fail($"Test failed: {errorMessage}");
-                    CaptureScreenshot();
+                    try
+                    {
+                        var testName = TestContext.CurrentContext.Test.Name;
+                        BiDiHandler.ProcessBiDiResults(testName);
+                        Test.Info("BiDi processing completed");
+                    }
+                    catch (Exception ex)
+                    {
+                        Test.Warning($"Error processing BiDi results: {ex.Message}");
+                    }
+                    finally
+                    {
+                        BiDiHandler.Dispose();
+                        BiDiHandler = null;
+                    }
                 }
-                else if (status == TestStatus.Passed)
+
+                switch (status)
                 {
-                    Test.Pass("Test completed successfully");
-                }
-                else
-                {
-                    Test.Skip("Test was skipped");
+                    case TestStatus.Failed:
+                        Test.Fail($"Test failed: {errorMessage}");
+                        CaptureScreenshot();
+                        break;
+                    case TestStatus.Passed:
+                        Test.Pass("Test completed successfully");
+                        break;
+                    case TestStatus.Inconclusive:
+                    case TestStatus.Skipped:
+                    case TestStatus.Warning:
+                    default:
+                        Test.Skip("Test was skipped");
+                        break;
                 }
         
-                // Explicitly flush ExtentReport
                 ExtentReportManager.GetInstance().Flush();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error during TearDown: {ex.Message}");
-            }
-            finally
-            {
-                // Explicitly dispose driver (necessary for NUnit)
-                if (Driver != null)
-                {
-                    try { Driver.Dispose(); }
-                    catch
-                    {
-                        // ignored
-                    }
-
-                    Driver = null;
-                }
-
-                // Delegate cleanup to DriverFactory
-                DriverFactory.QuitDriver();
-            }
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during TearDown: {ex.Message}");
+        }
+        finally
+        {
+            if (Driver != null)
+            {
+                try { Driver.Dispose(); }
+                catch { /* ignored */ }
+                Driver = null;
+            }
+
+            DriverFactory.QuitDriver();
+        }
+    }
 
         private void CaptureScreenshot()
         {

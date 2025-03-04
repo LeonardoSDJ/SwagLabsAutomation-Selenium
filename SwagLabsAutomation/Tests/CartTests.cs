@@ -14,17 +14,21 @@ namespace SwagLabsAutomation.Tests
         [SetUp]
         public void SetupTest()
         {
+            // Call setup for setting up the driver and BiDiHandler
+            base.Setup();
+            
             _loginPage = new LoginPage(Driver);
             _loginPage.NavigateToLoginPage();
             _productsPage = _loginPage.Login("standard_user", "secret_sauce");
             Assert.That(_productsPage.IsOnProductsPage(), Is.True, "Failed to login to start cart tests.");
-            
         }
 
         [Test]
         public void AddItemToCart()
         {
+           
             // Arrange - Products page already loaded after SetUp
+            LogInfo("Starting test to add item to cart");
 
             // Act - Add product to cart
             _productsPage.AddProductToCart("sauce-labs-backpack");

@@ -2,9 +2,14 @@
 <RunSettings>
   <NUnit>
     <NumberOfTestWorkers>4</NumberOfTestWorkers>
+    <ParallelizeTestCollections>true</ParallelizeTestCollections>
+    <ParallelizeAssemblies>false</ParallelizeAssemblies>
   </NUnit>
   <RunConfiguration>
     <MaxCpuCount>4</MaxCpuCount>
     <DisableParallelization>false</DisableParallelization>
   </RunConfiguration>
+  <TestRunParameters>
+    <Parameter name="TestTimeout" value="300000" />
+  </TestRunParameters>
 </RunSettings>

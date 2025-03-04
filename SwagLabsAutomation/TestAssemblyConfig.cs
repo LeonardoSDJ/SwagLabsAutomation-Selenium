@@ -4,8 +4,11 @@ using SwagLabsAutomation.Utils;
 namespace SwagLabsAutomation;
 
 [SetUpFixture]
-[assembly: Parallelizable(ParallelScope.Fixtures)]
-[assembly: LevelOfParallelism(4)] // Number of parallel threads
+/* Parallelization won't be finished by now
+ * [assembly: Parallelizable(ParallelScope.Fixtures)]
+ *[assembly: LevelOfParallelism(4)]  Number of parallel threads
+ */
+
 public class TestAssemblyConfig
 {
     [OneTimeSetUp]
